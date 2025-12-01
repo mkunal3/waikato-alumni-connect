@@ -47,7 +47,7 @@ export function MentorDashboard({ onNavigate }: MentorDashboardProps) {
       sessionsCompleted: 2,
       totalPlanned: 3,
       mentoringType: 'Vocational Mentoring (2-3 sessions)',
-      avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&h=100&fit=crop&crop=face',
+      avatar: 'data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%27400%27 height=%27300%27%3E%3Crect width=%27400%27 height=%27300%27 fill=%27%23e5e7eb%27/%3E%3Ctext x=%2750%25%27 y=%2750%25%27 dominant-baseline=%27middle%27 text-anchor=%27middle%27 font-family=%27sans-serif%27 font-size=%2720%27 fill=%27%23999%27%3EImage Placeholder%3C/text%3E%3C/svg%3E
       status: 'Active'
     }
   ];
@@ -63,7 +63,7 @@ export function MentorDashboard({ onNavigate }: MentorDashboardProps) {
       matchScore: 91,
       mentoringPreferences: ['Technical Skill Development', 'Career Planning and Progression'],
       requestDate: 'March 13, 2026',
-      avatar: 'https://images.unsplash.com/photo-1494790108755-2616b612b47c?w=100&h=100&fit=crop&crop=face',
+      avatar: 'data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%27400%27 height=%27300%27%3E%3Crect width=%27400%27 height=%27300%27 fill=%27%23e5e7eb%27/%3E%3Ctext x=%2750%25%27 y=%2750%25%27 dominant-baseline=%27middle%27 text-anchor=%27middle%27 font-family=%27sans-serif%27 font-size=%2720%27 fill=%27%23999%27%3EImage Placeholder%3C/text%3E%3C/svg%3E
       cvAvailable: true,
       message: 'I am very interested in pursuing a career in data science and would love to learn about your journey in the field.'
     },
@@ -76,7 +76,7 @@ export function MentorDashboard({ onNavigate }: MentorDashboardProps) {
       matchScore: 85,
       mentoringPreferences: ['Career Planning and Progression', 'Postgraduate Study Advice'],
       requestDate: 'March 12, 2026',
-      avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face',
+      avatar: 'data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%27400%27 height=%27300%27%3E%3Crect width=%27400%27 height=%27300%27 fill=%27%23e5e7eb%27/%3E%3Ctext x=%2750%25%27 y=%2750%25%27 dominant-baseline=%27middle%27 text-anchor=%27middle%27 font-family=%27sans-serif%27 font-size=%2720%27 fill=%27%23999%27%3EImage Placeholder%3C/text%3E%3C/svg%3E
       cvAvailable: true,
       message: 'I am considering pursuing postgraduate studies and would appreciate your guidance on career paths in statistics.'
     }
@@ -438,7 +438,7 @@ export function MentorDashboard({ onNavigate }: MentorDashboardProps) {
             <Card className="p-6">
               <div className="text-center mb-6">
                 <Avatar className="w-24 h-24 mx-auto mb-4">
-                  <AvatarImage src="https://images.unsplash.com/photo-1494790108755-2616b612b47c?w=150&h=150&fit=crop&crop=face" />
+                  <AvatarImage src="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%27400%27 height=%27300%27%3E%3Crect width=%27400%27 height=%27300%27 fill=%27%23e5e7eb%27/%3E%3Ctext x=%2750%25%27 y=%2750%25%27 dominant-baseline=%27middle%27 text-anchor=%27middle%27 font-family=%27sans-serif%27 font-size=%2720%27 fill=%27%23999%27%3EImage Placeholder%3C/text%3E%3C/svg%3E" />
                   <AvatarFallback>SM</AvatarFallback>
                 </Avatar>
                 <h3 className="font-semibold mb-1">{mentorProfile.name}</h3>

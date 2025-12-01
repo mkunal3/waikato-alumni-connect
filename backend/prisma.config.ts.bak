@@ -1,6 +1,7 @@
 import "dotenv/config";
+import type { PrismaConfig } from "prisma";
 
 export default {
   schema: "./prisma/schema.prisma",
   // outdir: "./generated", // optional – you can add later if you want
-};
+} satisfies PrismaConfig;

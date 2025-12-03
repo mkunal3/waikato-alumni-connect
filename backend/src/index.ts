@@ -1,12 +1,17 @@
+import registerRoute from "./auth/register";
+import loginRoute from "./auth/login";
 import prisma from "./prisma";
 import express from "express";
 import cors from "cors";
+
 
 const app = express();
 const PORT = 4000;
 
 app.use(cors());
 app.use(express.json());
+app.use("/auth", registerRoute);
+app.use("/auth", loginRoute);
 
 // Root route
 app.get("/", (_req, res) => {

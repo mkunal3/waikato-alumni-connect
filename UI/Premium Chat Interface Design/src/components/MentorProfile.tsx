@@ -2,7 +2,7 @@ import { ImageWithFallback } from "./figma/ImageWithFallback";
 import { Eye, Calendar } from "lucide-react";
 
 export function MentorProfile() {
-  const mentorImage = "data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%27400%27 height=%27300%27%3E%3Crect width=%27400%27 height=%27300%27 fill=%27%23e5e7eb%27/%3E%3Ctext x=%2750%25%27 y=%2750%25%27 dominant-baseline=%27middle%27 text-anchor=%27middle%27 font-family=%27sans-serif%27 font-size=%2720%27 fill=%27%23999%27%3EImage Placeholder%3C/text%3E%3C/svg%3E";
+  const mentorImage = "https://images.unsplash.com/photo-1560250097-0b93528c311a?w=400&h=400&fit=crop";
   
   const skills = [
     "UI/UX Design",

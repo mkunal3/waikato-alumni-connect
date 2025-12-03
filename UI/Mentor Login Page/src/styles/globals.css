@@ -39,12 +39,6 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
-  
-  /* Waikato Colors */
-  --waikato-red: #B91C2E;
-  --waikato-dark: #2D2D2D;
-  --waikato-gray: #F5F5F5;
-  --waikato-border: #E0E0E0;
 }
 
 .dark {

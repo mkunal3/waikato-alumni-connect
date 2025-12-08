@@ -1,3 +1,5 @@
+import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../contexts/LanguageContext';
 import { content } from '../config/content';
 
@@ -5,7 +7,10 @@ const campusImage = 'https://images.unsplash.com/photo-1522202176988-66273c2fd55
 
 export function WaikatoHeroSection() {
   const { t } = useLanguage();
-
+  const navigate = useNavigate();
+  const [isFindMentorHovered, setIsFindMentorHovered] = React.useState(false);
+  const [isBecomeMentorHovered, setIsBecomeMentorHovered] = React.useState(false);
+  
   return (
     <section className="relative h-[600px] overflow-hidden">
       {/* Background Image */}
@@ -32,13 +37,30 @@ export function WaikatoHeroSection() {
               {t(content.hero.tagline.en, content.hero.tagline.mi)}
             </p>
 
-            {/* Buttons */}
+            {/* Action Buttons */}
             <div className="flex gap-4 mb-12">
-              <button className="px-8 py-4 rounded-xl text-white transition-all hover:shadow-xl hover:scale-105 font-medium"
-                style={{ backgroundColor: '#D50000' }}>
+              <button 
+                className="px-2 py-4 rounded-xl text-white transition-colors font-medium"
+                style={{ 
+                  border: '2px solid #FFFFFF',
+                  backgroundColor: isFindMentorHovered ? '#D50000' : 'rgba(0, 0, 0, 0)',
+                  width: '235px'
+                }}
+                onClick={() => navigate('/login')}
+                onMouseEnter={() => setIsFindMentorHovered(true)}
+                onMouseLeave={() => setIsFindMentorHovered(false)}>
                 {t(content.hero.findMentor.en, content.hero.findMentor.mi)}
               </button>
-              <button className="px-8 py-4 rounded-xl border-2 border-white text-white transition-all hover:bg-white/10 font-medium">
+              <button 
+                className="px-2 py-4 rounded-xl text-white transition-colors font-medium"
+                style={{ 
+                  border: '2px solid #FFFFFF',
+                  backgroundColor: isBecomeMentorHovered ? '#D50000' : 'rgba(0, 0, 0, 0)',
+                  width: '235px'
+                }}
+                onClick={() => navigate('/login')}
+                onMouseEnter={() => setIsBecomeMentorHovered(true)}
+                onMouseLeave={() => setIsBecomeMentorHovered(false)}>
                 {t(content.hero.becomeMentor.en, content.hero.becomeMentor.mi)}
               </button>
             </div>

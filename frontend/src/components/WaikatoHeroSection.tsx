@@ -1,5 +1,4 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../contexts/LanguageContext';
 import { content } from '../config/content';
 
@@ -7,7 +6,6 @@ const campusImage = 'https://images.unsplash.com/photo-1522202176988-66273c2fd55
 
 export function WaikatoHeroSection() {
   const { t } = useLanguage();
-  const navigate = useNavigate();
   const [isFindMentorHovered, setIsFindMentorHovered] = React.useState(false);
   const [isBecomeMentorHovered, setIsBecomeMentorHovered] = React.useState(false);
   
@@ -46,7 +44,6 @@ export function WaikatoHeroSection() {
                   backgroundColor: isFindMentorHovered ? '#D50000' : 'rgba(0, 0, 0, 0)',
                   width: '235px'
                 }}
-                onClick={() => navigate('/login')}
                 onMouseEnter={() => setIsFindMentorHovered(true)}
                 onMouseLeave={() => setIsFindMentorHovered(false)}>
                 {t(content.hero.findMentor.en, content.hero.findMentor.mi)}
@@ -58,7 +55,6 @@ export function WaikatoHeroSection() {
                   backgroundColor: isBecomeMentorHovered ? '#D50000' : 'rgba(0, 0, 0, 0)',
                   width: '235px'
                 }}
-                onClick={() => navigate('/login')}
                 onMouseEnter={() => setIsBecomeMentorHovered(true)}
                 onMouseLeave={() => setIsBecomeMentorHovered(false)}>
                 {t(content.hero.becomeMentor.en, content.hero.becomeMentor.mi)}

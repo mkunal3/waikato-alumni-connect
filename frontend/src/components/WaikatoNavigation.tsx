@@ -1,5 +1,4 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
 import { ChevronDown, Globe } from 'lucide-react';
 import {
   DropdownMenu,
@@ -15,7 +14,6 @@ const waikatoLogo = '/waikato-logo.png';
 export function WaikatoNavigation() {
   const { language, setLanguage, t } = useLanguage();
   const [isHovered, setIsHovered] = React.useState(false);
-  const navigate = useNavigate();
 
   return (
     <nav className="bg-white border-b border-gray-200 shadow-sm sticky top-0 z-50">
@@ -77,19 +75,13 @@ export function WaikatoNavigation() {
                 <ChevronDown className="w-4 h-4 flex-shrink-0" />
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" sideOffset={5} className="min-w-[200px] bg-white/95 backdrop-blur-xl border border-gray-200/50 shadow-2xl rounded-2xl p-3">
-                <DropdownMenuItem 
-                  className="cursor-pointer px-4 py-3 rounded-xl hover:bg-gradient-to-br hover:from-gray-50 hover:to-gray-100/80 focus:bg-gradient-to-br focus:from-gray-50 focus:to-gray-100/80 transition-all duration-200 ease-out"
-                  onClick={() => navigate('/login')}>
+                <DropdownMenuItem className="cursor-pointer px-4 py-3 rounded-xl hover:bg-gradient-to-br hover:from-gray-50 hover:to-gray-100/80 focus:bg-gradient-to-br focus:from-gray-50 focus:to-gray-100/80 transition-all duration-200 ease-out">
                   <span className="font-medium text-gray-900">{t(content.nav.studentLogin.en, content.nav.studentLogin.mi)}</span>
                 </DropdownMenuItem>
-                <DropdownMenuItem 
-                  className="cursor-pointer px-4 py-3 rounded-xl hover:bg-gradient-to-br hover:from-gray-50 hover:to-gray-100/80 focus:bg-gradient-to-br focus:from-gray-50 focus:to-gray-100/80 transition-all duration-200 ease-out"
-                  onClick={() => navigate('/login')}>
+                <DropdownMenuItem className="cursor-pointer px-4 py-3 rounded-xl hover:bg-gradient-to-br hover:from-gray-50 hover:to-gray-100/80 focus:bg-gradient-to-br focus:from-gray-50 focus:to-gray-100/80 transition-all duration-200 ease-out">
                   <span className="font-medium text-gray-900">{t(content.nav.mentorLogin.en, content.nav.mentorLogin.mi)}</span>
                 </DropdownMenuItem>
-                <DropdownMenuItem 
-                  className="cursor-pointer px-4 py-3 rounded-xl hover:bg-gradient-to-br hover:from-gray-50 hover:to-gray-100/80 focus:bg-gradient-to-br focus:from-gray-50 focus:to-gray-100/80 transition-all duration-200 ease-out"
-                  onClick={() => navigate('/login')}>
+                <DropdownMenuItem className="cursor-pointer px-4 py-3 rounded-xl hover:bg-gradient-to-br hover:from-gray-50 hover:to-gray-100/80 focus:bg-gradient-to-br focus:from-gray-50 focus:to-gray-100/80 transition-all duration-200 ease-out">
                   <span className="font-medium text-gray-900">{t(content.nav.adminLogin.en, content.nav.adminLogin.mi)}</span>
                 </DropdownMenuItem>
               </DropdownMenuContent>

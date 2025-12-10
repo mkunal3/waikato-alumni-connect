@@ -2,18 +2,28 @@ import React from 'react';
 import { LanguageProvider } from './contexts/LanguageContext';
 import { WaikatoNavigation } from './components/WaikatoNavigation';
 import { WaikatoHeroSection } from './components/WaikatoHeroSection';
+import { FeatureCardsSection } from './components/FeatureCardsSection';
+import { HowItWorksWaikato } from './components/HowItWorksWaikato';
+import { ProgrammeGuideWaikato } from './components/ProgrammeGuideWaikato';
+import { TutorialSectionWaikato } from './components/TutorialSectionWaikato';
 import { WaikatoFooter } from './components/WaikatoFooter';
 
 export default function App() {
   return (
-    <LanguageProvider children={
-      <div className="min-h-screen bg-white">
-        <WaikatoNavigation />
-        <main className="mb-32">
-          <WaikatoHeroSection />
-        </main>
-        <WaikatoFooter />
-      </div>
-    } />
+    <LanguageProvider>
+      <>
+        <div className="min-h-screen bg-white">
+          <WaikatoNavigation />
+          <main>
+            <WaikatoHeroSection />
+            <FeatureCardsSection />
+            <HowItWorksWaikato />
+            <ProgrammeGuideWaikato />
+            <TutorialSectionWaikato />
+          </main>
+          <WaikatoFooter />
+        </div>
+      </>
+    </LanguageProvider>
   );
 }

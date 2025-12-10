@@ -60,15 +60,6 @@ export function WaikatoHeroSection() {
                 {t(content.hero.becomeMentor.en, content.hero.becomeMentor.mi)}
               </button>
             </div>
-
-            {/* Search Bar */}
-            <div className="relative max-w-[600px]">
-              <input
-                type="text"
-                placeholder={t(content.hero.searchPlaceholder.en, content.hero.searchPlaceholder.mi)}
-                className="w-full px-6 py-4 rounded-2xl bg-white/95 backdrop-blur-sm border-0 shadow-xl focus:outline-none focus:ring-2 focus:ring-white text-gray-800"
-              />
-            </div>
           </div>
         </div>
       </div>

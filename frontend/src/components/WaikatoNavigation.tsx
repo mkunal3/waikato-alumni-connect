@@ -40,7 +40,7 @@ export function WaikatoNavigation() {
                     {language === 'en' ? 'EN' : 'MI'}
                   </span>
                   <ChevronDown className="w-3 h-3 text-gray-500 flex-shrink-0" />
-            </button>
+                </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" sideOffset={5} className="min-w-[160px] bg-white/95 backdrop-blur-xl border border-gray-200/50 shadow-2xl rounded-2xl p-2">
                 <DropdownMenuItem 

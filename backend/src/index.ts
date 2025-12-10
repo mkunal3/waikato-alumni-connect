@@ -1,25 +1,30 @@
-import registerRoute from "./auth/register";
-import loginRoute from "./auth/login";
-import prisma from "./prisma";
-import express from "express";
+import express, { Request, Response } from "express";
 import cors from "cors";
 
+import registerRoute from "./auth/register";
+import loginRoute from "./auth/login";
+import matchRouter from "./routes/match";
+import prisma from "./prisma";
 
 const app = express();
 const PORT = 4000;
 
+// Middleware
 app.use(cors());
 app.use(express.json());
+
+// Routes
 app.use("/auth", registerRoute);
 app.use("/auth", loginRoute);
+app.use("/match", matchRouter);
 
-// Root route
-app.get("/", (_req, res) => {
+// Health check
+app.get("/", (_req: Request, res: Response) => {
   res.json({ message: "Waikato Alumni Connect API is running" });
 });
 
-// Fetch all users (Prisma + PostgreSQL)
-app.get("/users", async (_req, res) => {
+// Debug: Fetch all users
+app.get("/users", async (_req: Request, res: Response) => {
   try {
     const users = await prisma.user.findMany();
     res.json(users);
@@ -29,6 +34,7 @@ app.get("/users", async (_req, res) => {
   }
 });
 
+// Start server
 app.listen(PORT, () => {
   console.log(`Server is listening on http://localhost:${PORT}`);
 });

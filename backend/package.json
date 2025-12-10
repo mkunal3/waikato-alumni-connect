@@ -21,9 +21,11 @@
   "homepage": "https://github.com/mkunal3/alumni-connect-api#readme",
   "dependencies": {
     "@prisma/client": "^6.19.0",
+    "@types/jsonwebtoken": "^9.0.10",
     "bcryptjs": "^3.0.3",
     "cors": "^2.8.5",
     "express": "^5.1.0",
+    "jsonwebtoken": "^9.0.3",
     "prisma": "^6.19.0"
   },
   "devDependencies": {

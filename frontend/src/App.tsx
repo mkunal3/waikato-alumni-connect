@@ -1,29 +1,66 @@
 import React from 'react';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { LanguageProvider } from './contexts/LanguageContext';
-import { WaikatoNavigation } from './components/WaikatoNavigation';
-import { WaikatoHeroSection } from './components/WaikatoHeroSection';
-import { FeatureCardsSection } from './components/FeatureCardsSection';
-import { HowItWorksWaikato } from './components/HowItWorksWaikato';
-import { ProgrammeGuideWaikato } from './components/ProgrammeGuideWaikato';
-import { TutorialSectionWaikato } from './components/TutorialSectionWaikato';
-import { WaikatoFooter } from './components/WaikatoFooter';
+import { AuthProvider } from './contexts/AuthContext';
+import { ProtectedRoute } from './components/ProtectedRoute';
+import { DashboardRedirect } from './components/DashboardRedirect';
+import { HomePage } from './pages/HomePage';
+import { LoginPage } from './pages/LoginPage';
+import { StudentDashboard } from './pages/StudentDashboard';
+import { MentorDashboard } from './pages/MentorDashboard';
+import { AdminDashboard } from './pages/AdminDashboard';
 
 export default function App() {
   return (
     <LanguageProvider>
-      <>
-        <div className="min-h-screen bg-white">
-          <WaikatoNavigation />
-          <main>
-            <WaikatoHeroSection />
-            <FeatureCardsSection />
-            <HowItWorksWaikato />
-            <ProgrammeGuideWaikato />
-            <TutorialSectionWaikato />
-          </main>
-          <WaikatoFooter />
-        </div>
-      </>
+      <AuthProvider>
+        <BrowserRouter>
+          <Routes>
+            {/* Public routes */}
+            <Route path="/" element={<HomePage />} />
+            <Route path="/login" element={<LoginPage />} />
+            
+            {/* Dashboard redirect - automatically routes based on user role */}
+            <Route 
+              path="/dashboard" 
+              element={
+                <ProtectedRoute>
+                  <DashboardRedirect />
+                </ProtectedRoute>
+              } 
+            />
+            
+            {/* Role-specific dashboard routes */}
+            <Route
+              path="/student/dashboard"
+              element={
+                <ProtectedRoute allowedRoles={['student']} redirectTo="/login">
+                  <StudentDashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/mentor/dashboard"
+              element={
+                <ProtectedRoute allowedRoles={['alumni']} redirectTo="/login">
+                  <MentorDashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/dashboard"
+              element={
+                <ProtectedRoute allowedRoles={['admin']} redirectTo="/login">
+                  <AdminDashboard />
+                </ProtectedRoute>
+              }
+            />
+            
+            {/* Catch all - redirect to home */}
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </BrowserRouter>
+      </AuthProvider>
     </LanguageProvider>
   );
 }

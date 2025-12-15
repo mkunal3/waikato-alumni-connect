@@ -4,6 +4,7 @@ import cors from "cors";
 import registerRoute from "./auth/register";
 import loginRoute from "./auth/login";
 import matchRouter from "./routes/match";
+import adminRouter from "./routes/admin";
 import prisma from "./prisma";
 
 const app = express();
@@ -17,6 +18,7 @@ app.use(express.json());
 app.use("/auth", registerRoute);
 app.use("/auth", loginRoute);
 app.use("/match", matchRouter);
+app.use("/admin", adminRouter);
 
 // Health check
 app.get("/", (_req: Request, res: Response) => {

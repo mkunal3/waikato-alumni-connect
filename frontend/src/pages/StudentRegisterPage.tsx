@@ -9,6 +9,7 @@ export function StudentRegisterPage() {
   
   const [formData, setFormData] = useState({
     email: '',
+    verificationCode: '',
     password: '',
     confirmPassword: ''
   });
@@ -16,6 +17,8 @@ export function StudentRegisterPage() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [codeSent, setCodeSent] = useState(false);
+  const [sendingCode, setSendingCode] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setFormData({
@@ -24,11 +27,56 @@ export function StudentRegisterPage() {
     });
   };
 
+  const handleSendCode = async () => {
+    setError(null);
+    
+    if (!formData.email) {
+      setError('Please enter your email address');
+      return;
+    }
+
+    if (!formData.email.endsWith('@students.waikato.ac.nz')) {
+      setError('Please use your Waikato student email (@students.waikato.ac.nz)');
+      return;
+    }
+
+    setSendingCode(true);
+
+    try {
+      // TODO: Call backend API to send verification code
+      // const response = await fetch(`${API_BASE_URL}/auth/send-verification-code`, {
+      //   method: 'POST',
+      //   headers: { 'Content-Type': 'application/json' },
+      //   body: JSON.stringify({ email: formData.email })
+      // });
+      
+      // Simulate API call for now
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      setCodeSent(true);
+      alert('Verification code sent to your email!');
+    } catch (err) {
+      setError('Failed to send verification code. Please try again.');
+    } finally {
+      setSendingCode(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
 
     // Validation
+    if (!codeSent) {
+      setError('Please send verification code first');
+      return;
+    }
+
+    if (!formData.verificationCode.trim()) {
+      setError('Please enter verification code');
+      return;
+    }
+
     if (formData.password !== formData.confirmPassword) {
       setError('Passwords do not match');
       return;
@@ -36,11 +84,6 @@ export function StudentRegisterPage() {
 
     if (formData.password.length < 8) {
       setError('Password must be at least 8 characters long');
-      return;
-    }
-
-    if (!formData.email.endsWith('@students.waikato.ac.nz')) {
-      setError('Please use your Waikato student email (@students.waikato.ac.nz)');
       return;
     }
 
@@ -54,6 +97,7 @@ export function StudentRegisterPage() {
         },
         body: JSON.stringify({
           email: formData.email,
+          verificationCode: formData.verificationCode,
           password: formData.password,
           role: 'student'
         }),
@@ -111,18 +155,59 @@ export function StudentRegisterPage() {
                 <label htmlFor="email" style={{ display: 'block', color: '#4B5563', marginBottom: '8px', fontWeight: '500' }}>
                   Student Email *
                 </label>
-                <input
-                  type="email"
-                  id="email"
-                  name="email"
-                  value={formData.email}
-                  onChange={handleChange}
-                  placeholder="abc123@students.waikato.ac.nz"
-                  style={{ width: '100%', padding: '12px 16px', border: '1px solid #D1D5DB', borderRadius: '8px', outline: 'none' }}
-                  required
-                  disabled={isLoading}
-                />
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <input
+                    type="email"
+                    id="email"
+                    name="email"
+                    value={formData.email}
+                    onChange={handleChange}
+                    placeholder="abc123@students.waikato.ac.nz"
+                    style={{ flex: 1, padding: '12px 16px', border: '1px solid #D1D5DB', borderRadius: '8px', outline: 'none' }}
+                    required
+                    disabled={isLoading || codeSent}
+                  />
+                  <button
+                    type="button"
+                    onClick={handleSendCode}
+                    disabled={sendingCode || codeSent || isLoading}
+                    style={{
+                      padding: '12px 24px',
+                      backgroundColor: codeSent ? '#10B981' : '#D50000',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '8px',
+                      cursor: (sendingCode || codeSent || isLoading) ? 'not-allowed' : 'pointer',
+                      opacity: (sendingCode || codeSent || isLoading) ? 0.6 : 1,
+                      whiteSpace: 'nowrap',
+                      fontWeight: '500'
+                    }}
+                  >
+                    {sendingCode ? 'Sending...' : codeSent ? 'Code Sent' : 'Send Code'}
+                  </button>
+                </div>
               </div>
+
+              {/* Verification Code */}
+              {codeSent && (
+                <div>
+                  <label htmlFor="verificationCode" style={{ display: 'block', color: '#4B5563', marginBottom: '8px', fontWeight: '500' }}>
+                    Verification Code *
+                  </label>
+                  <input
+                    type="text"
+                    id="verificationCode"
+                    name="verificationCode"
+                    value={formData.verificationCode}
+                    onChange={handleChange}
+                    placeholder="Enter 6-digit code"
+                    maxLength={6}
+                    style={{ width: '100%', padding: '12px 16px', border: '1px solid #D1D5DB', borderRadius: '8px', outline: 'none' }}
+                    required
+                    disabled={isLoading}
+                  />
+                </div>
+              )}
 
               {/* Password */}
               <div>

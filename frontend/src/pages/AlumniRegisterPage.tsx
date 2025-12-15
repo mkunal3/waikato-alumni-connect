@@ -8,7 +8,9 @@ export function AlumniRegisterPage() {
   const navigate = useNavigate();
   
   const [formData, setFormData] = useState({
+    invitationCode: '',
     email: '',
+    verificationCode: '',
     password: '',
     confirmPassword: ''
   });
@@ -16,6 +18,8 @@ export function AlumniRegisterPage() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [codeSent, setCodeSent] = useState(false);
+  const [sendingCode, setSendingCode] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setFormData({
@@ -24,11 +28,61 @@ export function AlumniRegisterPage() {
     });
   };
 
+  const handleSendCode = async () => {
+    setError(null);
+    
+    if (!formData.invitationCode.trim()) {
+      setError('Please enter invitation code first');
+      return;
+    }
+
+    if (!formData.email) {
+      setError('Please enter your email address');
+      return;
+    }
+
+    setSendingCode(true);
+
+    try {
+      // TODO: Call backend API to send verification code
+      // const response = await fetch(`${API_BASE_URL}/auth/send-verification-code`, {
+      //   method: 'POST',
+      //   headers: { 'Content-Type': 'application/json' },
+      //   body: JSON.stringify({ email: formData.email, invitationCode: formData.invitationCode })
+      // });
+      
+      // Simulate API call for now
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      setCodeSent(true);
+      alert('Verification code sent to your email!');
+    } catch (err) {
+      setError('Failed to send verification code. Please try again.');
+    } finally {
+      setSendingCode(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
 
     // Validation
+    if (!formData.invitationCode.trim()) {
+      setError('Invitation code is required');
+      return;
+    }
+
+    if (!codeSent) {
+      setError('Please send verification code first');
+      return;
+    }
+
+    if (!formData.verificationCode.trim()) {
+      setError('Please enter verification code');
+      return;
+    }
+
     if (formData.password !== formData.confirmPassword) {
       setError('Passwords do not match');
       return;
@@ -48,7 +102,9 @@ export function AlumniRegisterPage() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
+          invitationCode: formData.invitationCode,
           email: formData.email,
+          verificationCode: formData.verificationCode,
           password: formData.password,
           role: 'alumni'
         }),
@@ -101,23 +157,82 @@ export function AlumniRegisterPage() {
             )}
 
             <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-              {/* Email */}
+              {/* Invitation Code */}
               <div>
-                <label htmlFor="email" style={{ display: 'block', color: '#4B5563', marginBottom: '8px', fontWeight: '500' }}>
-                  Email Address *
+                <label htmlFor="invitationCode" style={{ display: 'block', color: '#4B5563', marginBottom: '8px', fontWeight: '500' }}>
+                  Invitation Code *
                 </label>
                 <input
-                  type="email"
-                  id="email"
-                  name="email"
-                  value={formData.email}
+                  type="text"
+                  id="invitationCode"
+                  name="invitationCode"
+                  value={formData.invitationCode}
                   onChange={handleChange}
-                  placeholder="your.email@example.com"
+                  placeholder="Enter your invitation code"
                   style={{ width: '100%', padding: '12px 16px', border: '1px solid #D1D5DB', borderRadius: '8px', outline: 'none' }}
                   required
                   disabled={isLoading}
                 />
               </div>
+
+              {/* Email */}
+              <div>
+                <label htmlFor="email" style={{ display: 'block', color: '#4B5563', marginBottom: '8px', fontWeight: '500' }}>
+                  Email Address *
+                </label>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <input
+                    type="email"
+                    id="email"
+                    name="email"
+                    value={formData.email}
+                    onChange={handleChange}
+                    placeholder="your.email@example.com"
+                    style={{ flex: 1, padding: '12px 16px', border: '1px solid #D1D5DB', borderRadius: '8px', outline: 'none' }}
+                    required
+                    disabled={isLoading || codeSent}
+                  />
+                  <button
+                    type="button"
+                    onClick={handleSendCode}
+                    disabled={sendingCode || codeSent || isLoading}
+                    style={{
+                      padding: '12px 24px',
+                      backgroundColor: codeSent ? '#10B981' : '#D50000',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '8px',
+                      cursor: (sendingCode || codeSent || isLoading) ? 'not-allowed' : 'pointer',
+                      opacity: (sendingCode || codeSent || isLoading) ? 0.6 : 1,
+                      whiteSpace: 'nowrap',
+                      fontWeight: '500'
+                    }}
+                  >
+                    {sendingCode ? 'Sending...' : codeSent ? 'Code Sent' : 'Send Code'}
+                  </button>
+                </div>
+              </div>
+
+              {/* Verification Code */}
+              {codeSent && (
+                <div>
+                  <label htmlFor="verificationCode" style={{ display: 'block', color: '#4B5563', marginBottom: '8px', fontWeight: '500' }}>
+                    Verification Code *
+                  </label>
+                  <input
+                    type="text"
+                    id="verificationCode"
+                    name="verificationCode"
+                    value={formData.verificationCode}
+                    onChange={handleChange}
+                    placeholder="Enter 6-digit code"
+                    maxLength={6}
+                    style={{ width: '100%', padding: '12px 16px', border: '1px solid #D1D5DB', borderRadius: '8px', outline: 'none' }}
+                    required
+                    disabled={isLoading}
+                  />
+                </div>
+              )}
 
               {/* Password */}
               <div>

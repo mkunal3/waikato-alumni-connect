@@ -5,37 +5,140 @@ import prisma from "../prisma";
 
 const router = Router();
 
-// We keep this as a TS-only type for safety.
-// Prisma still sees `role` as plain String.
-type UserRole = "student" | "alumni" | "admin";
+// TypeScript types for role validation
+type UserRole = "student" | "alumni";
 
-// POST /auth/register
+/**
+ * OLD REGISTER IMPLEMENTATION - DEPRECATED
+ * Kept for reference. This was the original simple registration without email verification.
+ * 
+ * router.post(
+ *   "/register",
+ *   async (req: Request, res: Response): Promise<Response | void> => {
+ *     try {
+ *       const { name, email, password, role } = req.body as {
+ *         name?: string;
+ *         email?: string;
+ *         password?: string;
+ *         role?: UserRole;
+ *       };
+ * 
+ *       // 1. Basic validation
+ *       if (!name || !email || !password || !role) {
+ *         return res.status(400).json({
+ *           error: "Name, email, password, and role are required",
+ *         });
+ *       }
+ * 
+ *       const normalisedEmail = email.toLowerCase().trim();
+ * 
+ *       const allowedRoles: UserRole[] = ["student", "alumni"];
+ *       if (!allowedRoles.includes(role)) {
+ *         return res.status(400).json({ error: "Invalid user role" });
+ *       }
+ * 
+ *       // 2. Check if user already exists
+ *       const existingUser = await prisma.user.findUnique({
+ *         where: { email: normalisedEmail },
+ *       });
+ * 
+ *       if (existingUser) {
+ *         return res.status(400).json({ error: "User already exists" });
+ *       }
+ * 
+ *       // 3. Hash password
+ *       const passwordHash = await bcrypt.hash(password, 10);
+ * 
+ *       // 4. Create user
+ *       const newUser = await prisma.user.create({
+ *         data: {
+ *           name,
+ *           email: normalisedEmail,
+ *           passwordHash,
+ *           role,
+ *           approvalStatus: "pending"
+ *         },
+ *         select: {
+ *           id: true,
+ *           name: true,
+ *           email: true,
+ *           role: true,
+ *           approvalStatus: true,
+ *           createdAt: true,
+ *         },
+ *       });
+ * 
+ *       return res.status(201).json({
+ *         message: "User registered successfully",
+ *         user: newUser,
+ *       });
+ *     } catch (error) {
+ *       console.error("Registration error:", error);
+ *       return res.status(500).json({ error: "Internal server error" });
+ *     }
+ *   }
+ * );
+ */
+
+/**
+ * POST /auth/register
+ * 
+ * New verification-based registration flow:
+ * 1. User provides email verification code (sent via email)
+ * 2. Alumni must provide valid invitation code
+ * 3. Students are pending approval
+ * 4. Alumni are auto-approved
+ */
 router.post(
   "/register",
   async (req: Request, res: Response): Promise<Response | void> => {
     try {
-      const { name, email, password, role } = req.body as {
-        name?: string;
+      const {
+        email,
+        verificationCode,
+        password,
+        role,
+        invitationCode,
+        name,
+      } = req.body as {
         email?: string;
+        verificationCode?: string;
         password?: string;
         role?: UserRole;
+        invitationCode?: string;
+        name?: string;
       };
 
-      // 1. Basic validation
-      if (!name || !email || !password || !role) {
+      // 1. Validate required fields
+      if (!email || !verificationCode || !password || !role) {
         return res.status(400).json({
-          error: "Name, email, password, and role are required",
+          error: "Email, verification code, password, and role are required",
+        });
+      }
+
+      // 2. Validate email format
+      if (!email.includes("@")) {
+        return res.status(400).json({ error: "Invalid email format" });
+      }
+
+      // 3. Validate role
+      const allowedRoles: UserRole[] = ["student", "alumni"];
+      if (!allowedRoles.includes(role)) {
+        return res.status(400).json({
+          error: "Role must be 'student' or 'alumni'",
+        });
+      }
+
+      // 4. Validate password length
+      if (password.length < 8) {
+        return res.status(400).json({
+          error: "Password must be at least 8 characters long",
         });
       }
 
       const normalisedEmail = email.toLowerCase().trim();
 
-      const allowedRoles: UserRole[] = ["student", "alumni", "admin"];
-      if (!allowedRoles.includes(role)) {
-        return res.status(400).json({ error: "Invalid user role" });
-      }
-
-      // 2. Check if user already exists
+      // 5. Check if user already exists
       const existingUser = await prisma.user.findUnique({
         where: { email: normalisedEmail },
       });
@@ -44,17 +147,84 @@ router.post(
         return res.status(400).json({ error: "User already exists" });
       }
 
-      // 3. Hash password
+      // 6. Verify email verification code
+      const verification = await prisma.emailVerification.findFirst({
+        where: {
+          email: normalisedEmail,
+          code: verificationCode,
+        },
+        orderBy: {
+          createdAt: "desc",
+        },
+      });
+
+      // Check if verification record exists, is unused, and not expired
+      if (!verification) {
+        return res
+          .status(400)
+          .json({ error: "Invalid or expired verification code" });
+      }
+
+      if (verification.usedAt !== null) {
+        return res
+          .status(400)
+          .json({ error: "Verification code already used" });
+      }
+
+      if (verification.expiresAt < new Date()) {
+        return res
+          .status(400)
+          .json({ error: "Invalid or expired verification code" });
+      }
+
+      // 7. Mark verification as used
+      await prisma.emailVerification.update({
+        where: { id: verification.id },
+        data: { usedAt: new Date() },
+      });
+
+      // 8. Handle alumni-specific validation
+      let approvalStatus = "pending";
+
+      if (role === "alumni") {
+        if (!invitationCode) {
+          return res
+            .status(400)
+            .json({ error: "Invitation code is required for alumni" });
+        }
+
+        // Validate invitation code
+        const validInvitation = await prisma.invitationCode.findUnique({
+          where: { code: invitationCode },
+        });
+
+        if (!validInvitation || !validInvitation.isActive) {
+          return res.status(400).json({ error: "Invalid invitation code" });
+        }
+
+        // Alumni are automatically approved
+        approvalStatus = "approved";
+      }
+
+      // Students are pending approval by default
+      if (role === "student") {
+        approvalStatus = "pending";
+      }
+
+      // 9. Hash password
       const passwordHash = await bcrypt.hash(password, 10);
 
-      // 4. Create user in database
+      // 10. Determine user name (fallback to email prefix if not provided)
+      const displayName = name || normalisedEmail.split("@")[0];
+
+      // 11. Create user
       const newUser = await prisma.user.create({
         data: {
-          name,
+          name: displayName,
           email: normalisedEmail,
           passwordHash,
-          role,                     // String in Prisma
-          approvalStatus: "pending" // matches schema comment + default
+          role,
+          approvalStatus,
         },
         select: {
           id: true,
@@ -66,7 +236,7 @@ router.post(
         },
       });
 
-      // 5. Respond
+      // 12. Respond with created user
       return res.status(201).json({
         message: "User registered successfully",
         user: newUser,

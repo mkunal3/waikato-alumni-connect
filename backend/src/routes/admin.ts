@@ -173,4 +173,81 @@ router.post(
   }
 );
 
+/**
+ * GET /invitation-code
+ * 
+ * Fetch the currently active invitation code
+ * Requires admin role
+ */
+router.get(
+  "/invitation-code",
+  authenticate,
+  requireAdmin,
+  async (_req: AuthRequest, res: Response): Promise<Response | void> => {
+    try {
+      const activeCode = await prisma.invitationCode.findFirst({
+        where: {
+          isActive: true,
+        },
+      });
+
+      return res.json({ code: activeCode?.code || null });
+    } catch (error) {
+      console.error("Fetch invitation code error:", error);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  }
+);
+
+/**
+ * POST /invitation-code
+ * 
+ * Create a new active invitation code
+ * Automatically deactivates all previous active codes
+ * Requires admin role
+ */
+router.post(
+  "/invitation-code",
+  authenticate,
+  requireAdmin,
+  async (req: AuthRequest, res: Response): Promise<Response | void> => {
+    try {
+      const { code } = req.body as { code?: string };
+
+      // 1) Validate code is provided and non-empty
+      if (!code || typeof code !== "string" || code.trim().length === 0) {
+        return res.status(400).json({ error: "Code must be a non-empty string" });
+      }
+
+      const trimmedCode = code.trim();
+
+      // 2) Deactivate all existing active codes
+      await prisma.invitationCode.updateMany({
+        where: {
+          isActive: true,
+        },
+        data: {
+          isActive: false,
+        },
+      });
+
+      // 3) Create new active invitation code
+      const newCode = await prisma.invitationCode.create({
+        data: {
+          code: trimmedCode,
+          isActive: true,
+        },
+      });
+
+      return res.status(201).json({
+        message: "New invitation code created",
+        invitationCode: newCode,
+      });
+    } catch (error) {
+      console.error("Create invitation code error:", error);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  }
+);
+
 export default router;

@@ -22,7 +22,7 @@ app.use("/admin", adminRouter);
 
 // Health check
 app.get("/", (_req: Request, res: Response) => {
-  res.json({ message: "Waikato Alumni Connect API is running" });
+  res.json({ message: "Waikato Connect API is running" });
 });
 
 // Debug: Fetch all users

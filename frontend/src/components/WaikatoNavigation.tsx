@@ -16,6 +16,7 @@ export function WaikatoNavigation() {
   const navigate = useNavigate();
   const { language, setLanguage, t } = useLanguage();
   const [isHovered, setIsHovered] = React.useState(false);
+  const [isRegisterHovered, setIsRegisterHovered] = React.useState(false);
 
   return (
     <nav className="bg-white border-b border-gray-200 shadow-sm sticky top-0 z-50">
@@ -97,6 +98,23 @@ export function WaikatoNavigation() {
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
+
+            {/* Register Button */}
+            <button
+              className="px-2 py-2.5 rounded-xl transition-all focus:outline-none flex items-center justify-center gap-2 min-w-[120px]"
+              style={{ 
+                width: '120px',
+                border: '2px solid #D50000',
+                backgroundColor: isRegisterHovered ? '#D50000' : 'white',
+                color: isRegisterHovered ? 'white' : '#D50000',
+                boxShadow: isRegisterHovered ? '0 10px 15px -3px rgba(213, 0, 0, 0.2)' : 'none'
+              }}
+              onMouseEnter={() => setIsRegisterHovered(true)}
+              onMouseLeave={() => setIsRegisterHovered(false)}
+              onClick={() => navigate('/register')}
+            >
+              <span className="text-sm font-medium whitespace-nowrap">Register</span>
+            </button>
           </div>
         </div>
       </div>

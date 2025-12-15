@@ -166,11 +166,11 @@ export function LoginPage() {
                   Don't have an account?
                 </p>
                 <a 
-                  href="#" 
+                  href="/register" 
                   style={{ color: '#D50000', fontSize: '0.875rem', textDecoration: 'none' }}
                   onClick={(e) => {
                     e.preventDefault();
-                    // TODO: Navigate to register page
+                    navigate('/register');
                   }}
                 >
                   Register here

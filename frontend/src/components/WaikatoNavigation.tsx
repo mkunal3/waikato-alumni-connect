@@ -28,6 +28,8 @@ export function WaikatoNavigation() {
               src={waikatoLogo} 
               alt="University of Waikato" 
               className="h-12 object-contain"
+              style={{ cursor: 'pointer' }}
+              onClick={() => navigate('/')}
             />
           </div>
 
@@ -36,7 +38,7 @@ export function WaikatoNavigation() {
             {/* Language Toggle */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className="px-3 py-2 rounded-xl bg-white hover:bg-gray-50 transition-all flex items-center justify-center gap-2 focus:outline-none"
+                <button className="px-3 py-2 rounded-xl bg-white hover:bg-gray-50 transition-all flex items-center justify-center gap-2 focus:outline-none cursor-pointer"
                   style={{ width: '100px', border: 'none' }}>
                   <Globe className="w-4 h-4 text-gray-600 flex-shrink-0" />
                   <span className="text-sm font-medium text-gray-700 inline-block text-center" style={{ width: '24px' }}>
@@ -64,7 +66,7 @@ export function WaikatoNavigation() {
             {/* Login Dropdown */}
             <DropdownMenu>
               <DropdownMenuTrigger 
-                className="px-2 py-2.5 rounded-xl transition-all focus:outline-none flex items-center justify-center gap-2 min-w-[120px]"
+                className="px-2 py-2.5 rounded-xl transition-all focus:outline-none flex items-center justify-center gap-2 min-w-[120px] cursor-pointer"
                 style={{ 
                   width: '120px',
                   border: '2px solid #000000',
@@ -101,7 +103,7 @@ export function WaikatoNavigation() {
 
             {/* Register Button */}
             <button
-              className="px-2 py-2.5 rounded-xl transition-all focus:outline-none flex items-center justify-center gap-2 min-w-[120px]"
+              className="px-2 py-2.5 rounded-xl transition-all focus:outline-none flex items-center justify-center gap-2 min-w-[120px] cursor-pointer"
               style={{ 
                 width: '120px',
                 border: '2px solid #D50000',

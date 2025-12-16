@@ -21,12 +21,13 @@ const requireAdmin = (
   next();
 };
 
-/**
+/* OLD mentor approval logic (no longer used)
+ *
  * GET /mentors/pending
  * 
  * Fetch all pending alumni mentor approval requests
  * Requires admin role
- */
+ *
 router.get(
   "/mentors/pending",
   authenticate,
@@ -59,12 +60,11 @@ router.get(
   }
 );
 
-/**
  * POST /mentors/:id/approve
  * 
  * Approve a pending alumni mentor
  * Requires admin role
- */
+ *
 router.post(
   "/mentors/:id/approve",
   authenticate,
@@ -116,12 +116,11 @@ router.post(
   }
 );
 
-/**
  * POST /mentors/:id/reject
  * 
  * Reject a pending alumni mentor
  * Requires admin role
- */
+ *
 router.post(
   "/mentors/:id/reject",
   authenticate,
@@ -168,6 +167,159 @@ router.post(
       });
     } catch (error) {
       console.error("Reject mentor error:", error);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  }
+);
+*/
+
+/**
+ * GET /students/pending
+ * 
+ * Fetch all pending student approval requests
+ * Requires admin role
+ */
+router.get(
+  "/students/pending",
+  authenticate,
+  requireAdmin,
+  async (_req: AuthRequest, res: Response): Promise<Response | void> => {
+    try {
+      const students = await prisma.user.findMany({
+        where: {
+          role: "student",
+          approvalStatus: "pending",
+        },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          role: true,
+          approvalStatus: true,
+          createdAt: true,
+        },
+        orderBy: {
+          createdAt: "asc",
+        },
+      });
+
+      return res.json({ students });
+    } catch (error) {
+      console.error("Fetch pending students error:", error);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  }
+);
+
+/**
+ * POST /students/:id/approve
+ * 
+ * Approve a pending student
+ * Requires admin role
+ */
+router.post(
+  "/students/:id/approve",
+  authenticate,
+  requireAdmin,
+  async (req: AuthRequest, res: Response): Promise<Response | void> => {
+    try {
+      // 1) Parse and validate student id
+      const studentId = parseInt(req.params.id, 10);
+      if (isNaN(studentId) || studentId <= 0) {
+        return res.status(400).json({ error: "Invalid student id" });
+      }
+
+      // 2) Find student
+      const student = await prisma.user.findUnique({
+        where: { id: studentId },
+      });
+
+      if (!student) {
+        return res.status(404).json({ error: "Student not found" });
+      }
+
+      // 3) Verify user is a student
+      if (student.role !== "student") {
+        return res.status(400).json({ error: "User is not a student" });
+      }
+
+      // 4) Update approval status
+      const updatedStudent = await prisma.user.update({
+        where: { id: studentId },
+        data: { approvalStatus: "approved" },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          role: true,
+          approvalStatus: true,
+          createdAt: true,
+        },
+      });
+
+      return res.json({
+        message: "Student approved successfully",
+        student: updatedStudent,
+      });
+    } catch (error) {
+      console.error("Approve student error:", error);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  }
+);
+
+/**
+ * POST /students/:id/reject
+ * 
+ * Reject a pending student
+ * Requires admin role
+ */
+router.post(
+  "/students/:id/reject",
+  authenticate,
+  requireAdmin,
+  async (req: AuthRequest, res: Response): Promise<Response | void> => {
+    try {
+      // 1) Parse and validate student id
+      const studentId = parseInt(req.params.id, 10);
+      if (isNaN(studentId) || studentId <= 0) {
+        return res.status(400).json({ error: "Invalid student id" });
+      }
+
+      // 2) Find student
+      const student = await prisma.user.findUnique({
+        where: { id: studentId },
+      });
+
+      if (!student) {
+        return res.status(404).json({ error: "Student not found" });
+      }
+
+      // 3) Verify user is a student
+      if (student.role !== "student") {
+        return res.status(400).json({ error: "User is not a student" });
+      }
+
+      // 4) Update approval status
+      const updatedStudent = await prisma.user.update({
+        where: { id: studentId },
+        data: { approvalStatus: "rejected" },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          role: true,
+          approvalStatus: true,
+          createdAt: true,
+        },
+      });
+
+      return res.json({
+        message: "Student rejected successfully",
+        student: updatedStudent,
+      });
+    } catch (error) {
+      console.error("Reject student error:", error);
       return res.status(500).json({ error: "Internal server error" });
     }
   }

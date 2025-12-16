@@ -42,7 +42,14 @@ router.post(
           .json({ error: "Invalid email or password" });
       }
 
-      // 4) Generate JWT
+      // 4) Check approval status (admins bypass approval check)
+      if (user.role !== "admin" && user.approvalStatus !== "approved") {
+        return res
+          .status(403)
+          .json({ error: "Your account is not approved yet. Please wait for admin approval." });
+      }
+
+      // 5) Generate JWT
       const jwtSecret = process.env.JWT_SECRET;
       if (!jwtSecret) {
         console.error("JWT secret is not configured");
@@ -57,7 +64,7 @@ router.post(
         { expiresIn: "1h" }
       );
 
-      // 5) Remove password hash from response
+      // 6) Remove password hash from response
       const { passwordHash, ...userWithoutPassword } = user;
 
       return res.json({

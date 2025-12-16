@@ -250,4 +250,52 @@ router.post(
   }
 );
 
+/**
+ * GET /statistics
+ * 
+ * Fetch admin dashboard statistics
+ * Includes user counts and matching metrics
+ * Requires admin role
+ */
+router.get(
+  "/statistics",
+  authenticate,
+  requireAdmin,
+  async (_req: AuthRequest, res: Response): Promise<Response | void> => {
+    try {
+      // Use Promise.all for parallel database queries
+      const [totalStudents, totalAlumni, pendingStudents, totalMatches] =
+        await Promise.all([
+          prisma.user.count({
+            where: {
+              role: "student",
+            },
+          }),
+          prisma.user.count({
+            where: {
+              role: "alumni",
+            },
+          }),
+          prisma.user.count({
+            where: {
+              role: "student",
+              approvalStatus: "pending",
+            },
+          }),
+          prisma.match.count(),
+        ]);
+
+      return res.json({
+        totalStudents,
+        totalAlumni,
+        pendingStudents,
+        totalMatches,
+      });
+    } catch (error) {
+      console.error("Error fetching admin statistics:", error);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  }
+);
+
 export default router;

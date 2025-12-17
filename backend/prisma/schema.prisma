@@ -19,28 +19,28 @@ generator client {
 // }
 
 model User {
-  id               Int      @id @default(autoincrement())
-  name             String
-  email            String   @unique
-  role             String   // student / alumni / admin
-  passwordHash     String
-  approvalStatus   String   @default("pending") // pending / approved / rejected
-  createdAt        DateTime @default(now())
+  id             Int      @id @default(autoincrement())
+  name           String
+  email          String   @unique
+  role           String // student / alumni / admin
+  passwordHash   String
+  approvalStatus String   @default("pending") // pending / approved / rejected
+  createdAt      DateTime @default(now())
 
   // Student-specific fields
-  studentId        String?
-  degree           String?
-  yearOfStudy      Int?
+  studentId   String?
+  degree      String?
+  yearOfStudy Int?
 
   // Alumni-specific fields
-  graduationYear   Int?
-  currentCompany   String?
-  currentPosition  String?
+  graduationYear  Int?
+  currentCompany  String?
+  currentPosition String?
 
   // Matching fields (JSON arrays)
-  mentoringGoals   String[] // Career goals, skill development, etc.
-  skillsOffered    String[] // Skills alumni can teach
-  skillsWanted     String[] // Skills students want to learn
+  mentoringGoals String[] // Career goals, skill development, etc.
+  skillsOffered  String[] // Skills alumni can teach
+  skillsWanted   String[] // Skills students want to learn
 
   // Relations
   studentMatches   Match[] @relation("StudentMatches")
@@ -49,33 +49,34 @@ model User {
 }
 
 model Match {
-  id               Int      @id @default(autoincrement())
-  studentId        Int
-  alumniId         Int
-  status           String   @default("pending") // pending / confirmed / completed / ended
-  matchScore       Float?   // 0-100 compatibility score
-  matchReasons     String[] // Why this match was suggested
-  confirmedById    Int?     // Admin user who confirmed the match
-  confirmedAt      DateTime?
-  createdAt        DateTime @default(now())
+  id            Int       @id @default(autoincrement())
+  studentId     Int
+  alumniId      Int
+  status        String    @default("pending") // pending / confirmed / completed / ended
+  matchScore    Float? // 0-100 compatibility score
+  matchReasons  String[] // Why this match was suggested
+  confirmedById Int? // Admin user who confirmed the match
+  confirmedAt   DateTime?
+  createdAt     DateTime  @default(now())
 
   // Relations
-  student          User     @relation("StudentMatches", fields: [studentId], references: [id], onDelete: Cascade)
-  alumni           User     @relation("AlumniMatches", fields: [alumniId], references: [id], onDelete: Cascade)
-  confirmedBy      User?    @relation("ConfirmedMatches", fields: [confirmedById], references: [id], onDelete: SetNull)
+  student     User  @relation("StudentMatches", fields: [studentId], references: [id], onDelete: Cascade)
+  alumni      User  @relation("AlumniMatches", fields: [alumniId], references: [id], onDelete: Cascade)
+  confirmedBy User? @relation("ConfirmedMatches", fields: [confirmedById], references: [id], onDelete: SetNull)
 
   @@unique([studentId, alumniId])
 }
 
 model EmailVerification {
-  id        Int      @id @default(autoincrement())
+  id        Int       @id @default(autoincrement())
   email     String
   code      String
   expiresAt DateTime
   usedAt    DateTime?
-  createdAt DateTime @default(now())
+  createdAt DateTime  @default(now())
 
   @@index([email])
+  @@index([expiresAt])
 }
 
 model InvitationCode {

@@ -3,6 +3,7 @@ import cors from "cors";
 
 import registerRoute from "./auth/register";
 import loginRoute from "./auth/login";
+import sendVerificationCodeRoute from "./auth/sendVerificationCode";
 import matchRouter from "./routes/match";
 import adminRouter from "./routes/admin";
 import profileRouter from "./routes/profile";
@@ -14,9 +15,11 @@ const PORT = 4000;
 // Middleware
 app.use(cors());
 app.use(express.json());
+
 // Routes
 app.use("/auth", registerRoute);
 app.use("/auth", loginRoute);
+app.use("/auth", sendVerificationCodeRoute);
 app.use("/match", matchRouter);
 app.use("/admin", adminRouter);
 app.use("/profile", profileRouter);

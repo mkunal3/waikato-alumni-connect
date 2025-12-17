@@ -12,7 +12,9 @@ const waikatoLogo = '/waikato-logo.png';
 export function StudentDashboard() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const [cvUploaded, setCvUploaded] = useState(true);
+  // TODO: Replace with API call to get CV status
+  const [cvUploaded, setCvUploaded] = useState(false);
+  const [cvFileName, setCvFileName] = useState<string | null>(null);
 
   const handleLogout = () => {
     logout();
@@ -23,32 +25,34 @@ export function StudentDashboard() {
     navigate('/');
   };
 
+  // TODO: Replace with API call to get student profile
   const studentProfile = {
-    name: user?.name || 'Student',
+    name: user?.name || '',
     email: user?.email || '',
-    expectedGraduation: 'November 2026',
-    academicFocus: 'Computer Science',
-    profileComplete: 85
+    expectedGraduation: '',
+    academicFocus: '',
+    profileComplete: 0
   };
 
-  const currentMentor = {
-    name: 'Dr. Sarah Mitchell',
-    title: 'Senior Data Scientist',
-    company: 'Tech Solutions NZ',
-    email: 'sarah.mitchell@alumni.waikato.ac.nz',
-    matchedDate: 'March 5, 2026',
-    mentoringType: 'Vocational Mentoring',
-    status: 'Active'
-  };
+  // TODO: Replace with API call to get matched mentor
+  const currentMentor: {
+    name: string;
+    title: string;
+    company: string;
+    email: string;
+    matchedDate: string;
+    mentoringType: string;
+    status: string;
+  } | null = null;
 
-
+  // TODO: Calculate based on actual user progress
   const mentoringMilestones = [
-    { title: 'Complete Profile', status: 'completed', progress: 100, date: 'Feb 20, 2026' },
-    { title: 'Upload CV', status: 'completed', progress: 100, date: 'Feb 22, 2026' },
-    { title: 'Get Matched with Mentor', status: 'completed', progress: 100, date: 'Mar 5, 2026' },
-    { title: 'First Contact with Mentor', status: 'in-progress', progress: 50, date: 'In Progress' },
-    { title: 'Complete Mentoring Programme', status: 'pending', progress: 0, date: 'Pending' },
-    { title: 'Provide Feedback', status: 'pending', progress: 0, date: 'Pending' }
+    { title: 'Complete Profile', status: studentProfile.profileComplete >= 100 ? 'completed' : (studentProfile.profileComplete > 0 ? 'in-progress' : 'pending'), progress: studentProfile.profileComplete, date: '' },
+    { title: 'Upload CV', status: cvUploaded ? 'completed' : 'pending', progress: cvUploaded ? 100 : 0, date: '' },
+    { title: 'Get Matched with Mentor', status: currentMentor ? 'completed' : 'pending', progress: currentMentor ? 100 : 0, date: currentMentor?.matchedDate || '' },
+    { title: 'First Contact with Mentor', status: 'pending', progress: 0, date: '' },
+    { title: 'Complete Mentoring Programme', status: 'pending', progress: 0, date: '' },
+    { title: 'Provide Feedback', status: 'pending', progress: 0, date: '' }
   ];
 
 
@@ -86,14 +90,14 @@ export function StudentDashboard() {
 
         <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1.5rem' }}>
           {/* Main Content */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '1rem' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
             {/* Quick Stats */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem' }}>
               <div style={{ backgroundColor: 'white', borderRadius: '0.75rem', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', border: '1px solid #e5e7eb', padding: '0.75rem 1rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                   <Target size={24} color="#C8102E" />
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: '1.3rem', fontWeight: 'bold', lineHeight: '1.2' }}>1</div>
+                    <div style={{ fontSize: '1.3rem', fontWeight: 'bold', lineHeight: '1.2' }}>{currentMentor ? 1 : 0}</div>
                     <div style={{ fontSize: '0.75rem', color: '#6b7280', lineHeight: '1.2' }}>Active Mentor</div>
                   </div>
                 </div>
@@ -114,39 +118,51 @@ export function StudentDashboard() {
             <div style={{ backgroundColor: 'white', borderRadius: '0.75rem', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', border: '1px solid #e5e7eb', padding: '1.25rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
                 <h2 style={{ fontSize: '1.1rem', fontWeight: 600 }}>My Mentor</h2>
-                <span style={{ backgroundColor: '#dcfce7', color: '#16a34a', padding: '0.2rem 0.6rem', borderRadius: '9999px', fontSize: '0.8rem', fontWeight: 500 }}>{currentMentor.status}</span>
+                {currentMentor && (
+                  <span style={{ backgroundColor: '#dcfce7', color: '#16a34a', padding: '0.2rem 0.6rem', borderRadius: '9999px', fontSize: '0.8rem', fontWeight: 500 }}>{currentMentor.status}</span>
+                )}
               </div>
               
-              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem', marginBottom: '1rem' }}>
-                <div style={{ width: '52px', height: '52px', borderRadius: '9999px', backgroundColor: '#e5e7eb', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6b7280', fontWeight: 600, fontSize: '1.1rem' }}>
-                  SM
-                </div>
-                
-                <div style={{ flex: 1 }}>
-                  <h3 style={{ fontWeight: 600, marginBottom: '0.2rem', fontSize: '0.95rem' }}>{currentMentor.name}</h3>
-                  <p style={{ fontSize: '0.8rem', color: '#6b7280', marginBottom: '0.15rem' }}>{currentMentor.title}</p>
-                  <p style={{ fontSize: '0.8rem', color: '#C8102E' }}>{currentMentor.company}</p>
-                  <span style={{ display: 'inline-block', marginTop: '0.4rem', backgroundColor: '#f3f4f6', color: '#374151', padding: '0.2rem 0.6rem', borderRadius: '0.375rem', fontSize: '0.7rem' }}>
-                    {currentMentor.mentoringType}
-                  </span>
-                </div>
+              {currentMentor ? (
+                <>
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem', marginBottom: '1rem' }}>
+                    <div style={{ width: '52px', height: '52px', borderRadius: '9999px', backgroundColor: '#e5e7eb', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6b7280', fontWeight: 600, fontSize: '1.1rem' }}>
+                      {currentMentor.name.split(' ').map(n => n[0]).join('')}
+                    </div>
+                    
+                    <div style={{ flex: 1 }}>
+                      <h3 style={{ fontWeight: 600, marginBottom: '0.2rem', fontSize: '0.95rem' }}>{currentMentor.name}</h3>
+                      <p style={{ fontSize: '0.8rem', color: '#6b7280', marginBottom: '0.15rem' }}>{currentMentor.title}</p>
+                      <p style={{ fontSize: '0.8rem', color: '#C8102E' }}>{currentMentor.company}</p>
+                      <span style={{ display: 'inline-block', marginTop: '0.4rem', backgroundColor: '#f3f4f6', color: '#374151', padding: '0.2rem 0.6rem', borderRadius: '0.375rem', fontSize: '0.7rem' }}>
+                        {currentMentor.mentoringType}
+                      </span>
+                    </div>
 
-                <a href={`mailto:${currentMentor.email}`} style={{ backgroundColor: '#C8102E', color: 'white', padding: '0.4rem 0.8rem', borderRadius: '0.5rem', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 600, textDecoration: 'none', fontSize: '0.85rem' }}>
-                  <MessageSquare size={14} />
-                  <span>Email</span>
-                </a>
-              </div>
+                    <a href={`mailto:${currentMentor.email}`} style={{ backgroundColor: '#C8102E', color: 'white', padding: '0.4rem 0.8rem', borderRadius: '0.5rem', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 600, textDecoration: 'none', fontSize: '0.85rem' }}>
+                      <MessageSquare size={14} />
+                      <span>Email</span>
+                    </a>
+                  </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.75rem', paddingTop: '0.75rem', borderTop: '1px solid #e5e7eb' }}>
-                <div>
-                  <div style={{ fontSize: '0.8rem', color: '#6b7280' }}>Matched Since</div>
-                  <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>{currentMentor.matchedDate}</div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.75rem', paddingTop: '0.75rem', borderTop: '1px solid #e5e7eb' }}>
+                    <div>
+                      <div style={{ fontSize: '0.8rem', color: '#6b7280' }}>Matched Since</div>
+                      <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>{currentMentor.matchedDate}</div>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '0.8rem', color: '#6b7280' }}>Mentor Email</div>
+                      <div style={{ fontWeight: 600, fontSize: '0.8rem' }}>{currentMentor.email}</div>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <div style={{ textAlign: 'center', padding: '2rem 1rem', color: '#6b7280' }}>
+                  <Target size={40} color="#d1d5db" style={{ margin: '0 auto 0.75rem' }} />
+                  <p style={{ fontSize: '0.9rem', marginBottom: '0.5rem' }}>No mentor assigned yet</p>
+                  <p style={{ fontSize: '0.8rem', color: '#9ca3af' }}>Complete your profile to get matched</p>
                 </div>
-                <div>
-                  <div style={{ fontSize: '0.8rem', color: '#6b7280' }}>Mentor Email</div>
-                  <div style={{ fontWeight: 600, fontSize: '0.8rem' }}>{currentMentor.email}</div>
-                </div>
-              </div>
+              )}
             </div>
           </div>
 
@@ -197,7 +213,7 @@ export function StudentDashboard() {
                       <CheckCircle size={18} color="#16a34a" />
                       <div>
                         <div style={{ fontWeight: 500, fontSize: '0.8rem' }}>CV Uploaded</div>
-                        <div style={{ fontSize: '0.7rem', color: '#6b7280' }}>resume_2026.pdf</div>
+                        <div style={{ fontSize: '0.7rem', color: '#6b7280' }}>{cvFileName || 'CV uploaded'}</div>
                       </div>
                     </div>
                   </div>

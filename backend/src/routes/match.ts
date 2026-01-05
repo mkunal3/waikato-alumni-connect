@@ -216,6 +216,7 @@ router.post(
  * 
  * Fetch the authenticated user's confirmed match.
  * Students can fetch their alumni mentor, alumni can fetch their student mentee.
+ * Returns 200 with match: null if no match found.
  * 
  * Requires authentication.
  */
@@ -244,7 +245,13 @@ router.get(
               select: { id: true, name: true, email: true },
             },
             alumni: {
-              select: { id: true, name: true, email: true },
+              select: {
+                id: true,
+                name: true,
+                email: true,
+                currentCompany: true,
+                currentPosition: true,
+              },
             },
           },
         });
@@ -260,7 +267,13 @@ router.get(
               select: { id: true, name: true, email: true },
             },
             alumni: {
-              select: { id: true, name: true, email: true },
+              select: {
+                id: true,
+                name: true,
+                email: true,
+                currentCompany: true,
+                currentPosition: true,
+              },
             },
           },
         });
@@ -271,12 +284,12 @@ router.get(
           .json({ error: "Only students or alumni can view their match" });
       }
 
-      // 3) No confirmed match found
+      // 3) Return match (null if not found, 200 OK in either case)
       if (!match) {
-        return res.status(404).json({ error: "No confirmed match found" });
+        return res.json({ match: null });
       }
 
-      // 4) Return the confirmed match
+      // 4) Return the confirmed match with alumni details
       return res.json({
         match: {
           id: match.id,

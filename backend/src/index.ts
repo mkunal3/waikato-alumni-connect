@@ -41,6 +41,6 @@ app.get("/users", async (_req: Request, res: Response) => {
 });
 
 // Start server
-app.listen(PORT, () => {
-  console.log(`Server is listening on http://localhost:${PORT}`);
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`Server is listening on http://0.0.0.0:${PORT}`);
 });

@@ -37,6 +37,13 @@ model User {
   currentCompany  String?
   currentPosition String?
 
+  // Additional profile fields
+  expectedGraduation String?
+  academicFocus      String?
+  cvFileName         String?
+  cvFilePath         String?
+  cvUploadedAt       DateTime?
+
   // Matching fields (JSON arrays)
   mentoringGoals String[] // Career goals, skill development, etc.
   skillsOffered  String[] // Skills alumni can teach

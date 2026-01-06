@@ -183,12 +183,16 @@ router.post(
         });
       }
 
-      // 2. Validate email format
-      if (!email.includes("@")) {
+      // 2. Normalize email (trim + lowercase)
+      const normalisedEmail = email.toLowerCase().trim();
+
+      // 3. Validate email format with regex
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(normalisedEmail)) {
         return res.status(400).json({ error: "Invalid email format" });
       }
 
-      // 3. Validate role
+      // 4. Validate email domain for students
       const allowedRoles: UserRole[] = ["student", "alumni"];
       if (!allowedRoles.includes(role)) {
         return res.status(400).json({
@@ -196,16 +200,40 @@ router.post(
         });
       }
 
-      // 4. Validate password length
+      if (role === "student" && !normalisedEmail.endsWith("@students.waikato.ac.nz")) {
+        return res.status(400).json({
+          error: "Students must use their @students.waikato.ac.nz email address",
+        });
+      }
+
+      // 5. Validate password strength
+      // Must have: at least 8 chars, >=1 uppercase, >=1 lowercase, >=1 number, >=1 special char
       if (password.length < 8) {
         return res.status(400).json({
           error: "Password must be at least 8 characters long",
         });
       }
 
-      const normalisedEmail = email.toLowerCase().trim();
+      const hasUppercase = /[A-Z]/.test(password);
+      const hasLowercase = /[a-z]/.test(password);
+      const hasNumber = /[0-9]/.test(password);
+      const hasSpecialChar = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password);
 
-      // 5. Check if user already exists
+      if (!hasUppercase || !hasLowercase || !hasNumber || !hasSpecialChar) {
+        return res.status(400).json({
+          error: "Password must include at least one uppercase letter, one lowercase letter, one number, and one special character",
+        });
+      }
+
+      // 6. Validate verification code format (exactly 6 numeric digits)
+      const verificationCodeRegex = /^\d{6}$/;
+      if (!verificationCodeRegex.test(verificationCode)) {
+        return res.status(400).json({
+          error: "Verification code must be exactly 6 numeric digits",
+        });
+      }
+
+      // 7. Check if user already exists
       const existingUser = await prisma.user.findUnique({
         where: { email: normalisedEmail },
       });
@@ -214,7 +242,7 @@ router.post(
         return res.status(400).json({ error: "User already exists" });
       }
 
-      // 6. Verify email verification code
+      // 8. Verify email verification code
       const verification = await prisma.emailVerification.findFirst({
         where: {
           email: normalisedEmail,
@@ -244,13 +272,13 @@ router.post(
           .json({ error: "Invalid or expired verification code" });
       }
 
-      // 7. Mark verification as used
+      // 9. Mark verification as used
       await prisma.emailVerification.update({
         where: { id: verification.id },
         data: { usedAt: new Date() },
       });
 
-      // 8. Handle alumni-specific validation
+      // 10. Handle alumni-specific validation
       let approvalStatus = "pending";
 
       if (role === "alumni") {
@@ -278,13 +306,13 @@ router.post(
         approvalStatus = "pending";
       }
 
-      // 9. Hash password
+      // 11. Hash password
       const passwordHash = await bcrypt.hash(password, 10);
 
-      // 10. Determine user name (fallback to email prefix if not provided)
+      // 12. Determine user name (fallback to email prefix if not provided)
       const displayName = name || normalisedEmail.split("@")[0];
 
-      // 11. Create user
+      // 13. Create user
       const newUser = await prisma.user.create({
         data: {
           name: displayName,
@@ -303,7 +331,7 @@ router.post(
         },
       });
 
-      // 12. Respond with created user
+      // 14. Respond with created user
       return res.status(201).json({
         message: "User registered successfully",
         user: newUser,

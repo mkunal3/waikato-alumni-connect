@@ -21,10 +21,10 @@ export function HowItWorksWaikato() {
         <div className="grid grid-cols-4 gap-8">
           {content.howItWorks.steps.map((step, index) => (
             <div key={index} className="text-center">
-              <div className="w-24 h-24 rounded-full mx-auto mb-6 flex items-center justify-center text-white shadow-lg"
-                style={{ backgroundColor: '#D50000' }}>
+            <div className="w-24 h-24 rounded-full mx-auto mb-6 flex items-center justify-center text-white shadow-lg"
+              style={{ backgroundColor: '#D50000' }}>
                 <span className="text-4xl">{index + 1}</span>
-              </div>
+            </div>
               <h3 className="text-black mb-4">
                 {t(step.title.en, step.title.mi)}
               </h3>

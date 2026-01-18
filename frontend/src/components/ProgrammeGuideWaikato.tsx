@@ -30,11 +30,11 @@ export function ProgrammeGuideWaikato() {
             <div className="space-y-4">
               {content.programmeGuide.forStudents.points.map((point, index) => (
                 <div key={index} className="flex items-start gap-3">
-                  <CheckCircle className="w-6 h-6 mt-0.5 flex-shrink-0" style={{ color: '#D50000' }} />
-                  <p className="text-gray-800">
+                <CheckCircle className="w-6 h-6 mt-0.5 flex-shrink-0" style={{ color: '#D50000' }} />
+                <p className="text-gray-800">
                     {t(point.en, point.mi)}
-                  </p>
-                </div>
+                </p>
+              </div>
               ))}
             </div>
           </div>
@@ -49,11 +49,11 @@ export function ProgrammeGuideWaikato() {
             <div className="space-y-4">
               {content.programmeGuide.forMentors.points.map((point, index) => (
                 <div key={index} className="flex items-start gap-3">
-                  <CheckCircle className="w-6 h-6 mt-0.5 flex-shrink-0" style={{ color: '#D50000' }} />
-                  <p className="text-gray-800">
+                <CheckCircle className="w-6 h-6 mt-0.5 flex-shrink-0" style={{ color: '#D50000' }} />
+                <p className="text-gray-800">
                     {t(point.en, point.mi)}
-                  </p>
-                </div>
+                </p>
+              </div>
               ))}
             </div>
           </div>

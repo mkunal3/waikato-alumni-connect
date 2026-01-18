@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronDown, Globe } from 'lucide-react';
+import { ChevronDown, Globe, LayoutDashboard, LogOut } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -8,6 +8,7 @@ import {
   DropdownMenuTrigger,
 } from './ui/dropdown-menu';
 import { useLanguage } from '../contexts/LanguageContext';
+import { useAuth } from '../contexts/AuthContext';
 import { content } from '../config/content';
 
 const waikatoLogo = '/waikato-logo.png';
@@ -15,8 +16,25 @@ const waikatoLogo = '/waikato-logo.png';
 export function WaikatoNavigation() {
   const navigate = useNavigate();
   const { language, setLanguage, t } = useLanguage();
+  const { user, isAuthenticated, logout } = useAuth();
   const [isHovered, setIsHovered] = React.useState(false);
   const [isRegisterHovered, setIsRegisterHovered] = React.useState(false);
+  
+  const handleLogout = () => {
+    logout();
+    navigate('/');
+  };
+  
+  const handleDashboardClick = () => {
+    if (!user) return;
+    if (user.role === 'student') {
+      navigate('/student/dashboard');
+    } else if (user.role === 'alumni') {
+      navigate('/mentor/dashboard');
+    } else if (user.role === 'admin') {
+      navigate('/admin/dashboard');
+    }
+  };
 
   return (
     <nav className="bg-white border-b border-gray-200 shadow-sm sticky top-0 z-50">
@@ -63,60 +81,96 @@ export function WaikatoNavigation() {
               </DropdownMenuContent>
             </DropdownMenu>
 
-            {/* Login Dropdown */}
-            <DropdownMenu>
-              <DropdownMenuTrigger 
-                className="px-2 py-2.5 rounded-xl transition-all focus:outline-none flex items-center justify-center gap-2 min-w-[120px] cursor-pointer"
-                style={{ 
-                  width: '120px',
-                  border: '2px solid #000000',
-                  backgroundColor: isHovered ? '#D50000' : 'white',
-                  color: isHovered ? 'white' : '#111827',
-                  boxShadow: isHovered ? '0 10px 15px -3px rgba(0, 0, 0, 0.1)' : 'none'
-                }}
-                onMouseEnter={() => setIsHovered(true)}
-                onMouseLeave={() => setIsHovered(false)}>
-                <span className="text-sm font-medium whitespace-nowrap">{t(content.nav.login.en, content.nav.login.mi)}</span>
-                <ChevronDown className="w-4 h-4 flex-shrink-0" />
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" sideOffset={5} className="min-w-[200px] bg-white/95 backdrop-blur-xl border border-gray-200/50 shadow-2xl rounded-2xl p-3">
-                <DropdownMenuItem 
-                  className="cursor-pointer px-4 py-3 rounded-xl hover:bg-gradient-to-br hover:from-gray-50 hover:to-gray-100/80 focus:bg-gradient-to-br focus:from-gray-50 focus:to-gray-100/80 transition-all duration-200 ease-out"
+            {isAuthenticated && user ? (
+              <>
+                {/* Profile Avatar */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button
+                      className="rounded-full transition-all focus:outline-none flex items-center justify-center cursor-pointer border-2 border-transparent hover:border-gray-200"
+                      style={{ 
+                        width: '40px',
+                        height: '40px',
+                        padding: '0',
+                        aspectRatio: '1 / 1'
+                      }}
+                    >
+                      <div style={{ 
+                        width: '40px', 
+                        height: '40px', 
+                        borderRadius: '9999px', 
+                        backgroundColor: '#e5e7eb',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: '#6b7280',
+                        fontSize: '0.875rem',
+                        fontWeight: 600,
+                        flexShrink: 0
+                      }}>
+                        {user.name ? (
+                          user.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
+                        ) : (
+                          <User size={18} />
+                        )}
+                      </div>
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" sideOffset={5} className="min-w-[180px] bg-white/95 backdrop-blur-xl border border-gray-200/50 shadow-2xl rounded-2xl p-2">
+                    <DropdownMenuItem 
+                      className="cursor-pointer px-4 py-3 rounded-xl hover:bg-gradient-to-br hover:from-gray-50 hover:to-gray-100/80 focus:bg-gradient-to-br focus:from-gray-50 focus:to-gray-100/80 transition-all duration-200 ease-out"
+                      onClick={handleDashboardClick}
+                    >
+                      <LayoutDashboard className="w-4 h-4 mr-2" />
+                      <span className="font-medium text-gray-900">Dashboard</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem 
+                      className="cursor-pointer px-4 py-3 rounded-xl hover:bg-gradient-to-br hover:from-red-50 hover:to-red-100/80 focus:bg-gradient-to-br focus:from-red-50 focus:to-red-100/80 transition-all duration-200 ease-out"
+                      onClick={handleLogout}
+                    >
+                      <LogOut className="w-4 h-4 mr-2" style={{ color: '#D50000' }} />
+                      <span className="font-medium" style={{ color: '#D50000' }}>Logout</span>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </>
+            ) : (
+              <>
+                {/* Login Button */}
+                <button
+                  className="px-2 py-2.5 rounded-xl transition-all focus:outline-none flex items-center justify-center gap-2 min-w-[120px] cursor-pointer"
+                  style={{ 
+                    width: '120px',
+                    border: '2px solid #000000',
+                    backgroundColor: isHovered ? '#D50000' : 'white',
+                    color: isHovered ? 'white' : '#111827',
+                    boxShadow: isHovered ? '0 10px 15px -3px rgba(0, 0, 0, 0.1)' : 'none'
+                  }}
+                  onMouseEnter={() => setIsHovered(true)}
+                  onMouseLeave={() => setIsHovered(false)}
                   onClick={() => navigate('/login')}
                 >
-                  <span className="font-medium text-gray-900">{t(content.nav.studentLogin.en, content.nav.studentLogin.mi)}</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem 
-                  className="cursor-pointer px-4 py-3 rounded-xl hover:bg-gradient-to-br hover:from-gray-50 hover:to-gray-100/80 focus:bg-gradient-to-br focus:from-gray-50 focus:to-gray-100/80 transition-all duration-200 ease-out"
-                  onClick={() => navigate('/login')}
-                >
-                  <span className="font-medium text-gray-900">{t(content.nav.mentorLogin.en, content.nav.mentorLogin.mi)}</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem 
-                  className="cursor-pointer px-4 py-3 rounded-xl hover:bg-gradient-to-br hover:from-gray-50 hover:to-gray-100/80 focus:bg-gradient-to-br focus:from-gray-50 focus:to-gray-100/80 transition-all duration-200 ease-out"
-                  onClick={() => navigate('/login')}
-                >
-                  <span className="font-medium text-gray-900">{t(content.nav.adminLogin.en, content.nav.adminLogin.mi)}</span>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+                  <span className="text-sm font-medium whitespace-nowrap">{t(content.nav.login.en, content.nav.login.mi)}</span>
+                </button>
 
-            {/* Register Button */}
-            <button
-              className="px-2 py-2.5 rounded-xl transition-all focus:outline-none flex items-center justify-center gap-2 min-w-[120px] cursor-pointer"
-              style={{ 
-                width: '120px',
-                border: '2px solid #D50000',
-                backgroundColor: isRegisterHovered ? '#D50000' : 'white',
-                color: isRegisterHovered ? 'white' : '#D50000',
-                boxShadow: isRegisterHovered ? '0 10px 15px -3px rgba(213, 0, 0, 0.2)' : 'none'
-              }}
-              onMouseEnter={() => setIsRegisterHovered(true)}
-              onMouseLeave={() => setIsRegisterHovered(false)}
-              onClick={() => navigate('/register')}
-            >
-              <span className="text-sm font-medium whitespace-nowrap">Register</span>
-            </button>
+                {/* Register Button */}
+                <button
+                  className="px-2 py-2.5 rounded-xl transition-all focus:outline-none flex items-center justify-center gap-2 min-w-[120px] cursor-pointer"
+                  style={{ 
+                    width: '120px',
+                    border: '2px solid #D50000',
+                    backgroundColor: isRegisterHovered ? '#D50000' : 'white',
+                    color: isRegisterHovered ? 'white' : '#D50000',
+                    boxShadow: isRegisterHovered ? '0 10px 15px -3px rgba(213, 0, 0, 0.2)' : 'none'
+                  }}
+                  onMouseEnter={() => setIsRegisterHovered(true)}
+                  onMouseLeave={() => setIsRegisterHovered(false)}
+                  onClick={() => navigate('/register')}
+                >
+                  <span className="text-sm font-medium whitespace-nowrap">Register</span>
+                </button>
+              </>
+            )}
           </div>
         </div>
       </div>

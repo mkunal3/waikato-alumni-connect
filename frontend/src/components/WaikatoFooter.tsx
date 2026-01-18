@@ -222,7 +222,7 @@ export function WaikatoFooter() {
         </div>
         )}
       </div>
-
+      
       {/* Maori Pattern Border */}
       <div className="w-full bg-[#f5f5f5]">
         <img 

@@ -103,11 +103,11 @@ export function ChatPage() {
         };
 
         const handleConnect = () => {
-          console.log('Connected to chat server');
+          // Connection established
         };
 
         const handleDisconnect = () => {
-          console.log('Disconnected from chat server');
+          // Connection closed
         };
 
         // Add event listeners

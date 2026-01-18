@@ -528,15 +528,12 @@ export function AdminDashboard() {
 
   const handleApprove = async (userId: number, role: string) => {
     try {
-      console.log('handleApprove called with:', { userId, role });
       setError(null);
       const endpoint = role === 'student' 
         ? API_ENDPOINTS.adminApproveStudent(userId)
         : API_ENDPOINTS.adminApproveAlumni(userId);
       
-      console.log('Calling API endpoint:', endpoint);
       const response = await apiRequest(endpoint, { method: 'POST' });
-      console.log('API response:', response);
       
       // Refresh data
       const [studentsResponse, alumniResponse, statsResponse, allStudentsResponse, allAlumniResponse] = await Promise.allSettled([
@@ -2681,7 +2678,6 @@ export function AdminDashboard() {
                       onClick={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
-                        console.log('Approve button clicked for student:', selectedStudent.id);
                         handleApprove(selectedStudent.id, 'student');
                       }}
                       style={{

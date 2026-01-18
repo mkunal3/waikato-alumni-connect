@@ -10,8 +10,12 @@ import { RegisterSelectPage } from './pages/RegisterSelectPage';
 import { StudentRegisterPage } from './pages/StudentRegisterPage';
 import { AlumniRegisterPage } from './pages/AlumniRegisterPage';
 import { StudentDashboard } from './pages/StudentDashboard';
+import { StudentProfilePage } from './pages/StudentProfilePage';
+import { BrowseMentorsPage } from './pages/BrowseMentorsPage';
 import { MentorDashboard } from './pages/MentorDashboard';
+import { MentorProfilePage } from './pages/MentorProfilePage';
 import { AdminDashboard } from './pages/AdminDashboard';
+import { ChatPage } from './pages/ChatPage';
 
 export default function App() {
   return (
@@ -48,10 +52,42 @@ export default function App() {
               }
             />
             <Route
+              path="/student/profile"
+              element={
+                <ProtectedRoute allowedRoles={['student']} redirectTo="/login">
+                  <StudentProfilePage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/student/browse-mentors"
+              element={
+                <ProtectedRoute allowedRoles={['student']} redirectTo="/login">
+                  <BrowseMentorsPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="/mentor/dashboard"
               element={
                 <ProtectedRoute allowedRoles={['alumni']} redirectTo="/login">
                   <MentorDashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/mentor/profile"
+              element={
+                <ProtectedRoute allowedRoles={['alumni']} redirectTo="/login">
+                  <MentorProfilePage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/chat/:matchId"
+              element={
+                <ProtectedRoute>
+                  <ChatPage />
                 </ProtectedRoute>
               }
             />

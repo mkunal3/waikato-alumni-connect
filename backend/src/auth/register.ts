@@ -8,72 +8,8 @@ const router = Router();
 // TypeScript types for role validation
 type UserRole = "student" | "alumni";
 
-/**
- * Helper: Generate 6-digit numeric verification code
- */
-function generateVerificationCode(): string {
-  return Math.floor(100000 + Math.random() * 900000).toString();
-}
-
-/**
- * POST /auth/send-verification-code
- * 
- * Send a verification code to the provided email address.
- * The code is stored in the EmailVerification table and expires in 10 minutes.
- * 
- * For testing purposes, the code is logged to console.
- * In production, this should be sent via email service.
- * 
- * Body: { email: string, invitationCode?: string }
- */
-router.post(
-  "/send-verification-code",
-  async (req: Request, res: Response): Promise<Response | void> => {
-    try {
-      const { email, invitationCode } = req.body as {
-        email?: string;
-        invitationCode?: string;
-      };
-
-      // 1. Validate email is provided
-      if (!email) {
-        return res.status(400).json({ error: "Email is required" });
-      }
-
-      // 2. Validate email format
-      if (!email.includes("@")) {
-        return res.status(400).json({ error: "Invalid email format" });
-      }
-
-      const normalisedEmail = email.toLowerCase().trim();
-
-      // 3. Generate verification code
-      const code = generateVerificationCode();
-
-      // 4. Calculate expiration (10 minutes from now)
-      const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
-
-      // 5. Store in database
-      await prisma.emailVerification.create({
-        data: {
-          email: normalisedEmail,
-          code,
-          expiresAt,
-          usedAt: null,
-        },
-      });
-
-      // 6. Log code for testing (in production, send via email service)
-      console.log(`Verification code for ${normalisedEmail}: ${code}`);
-
-      // 7. Return success response
-      return res.json({ message: "Verification code sent" });
-    } catch (error) {
-      console.error("Send verification code error:", error);
-      return res.status(500).json({ error: "Internal server error" });
-    }
-  }
-);
+// Note: send-verification-code route is handled by sendVerificationCode.ts
+// This file only handles registration
 
 /**
  * OLD REGISTER IMPLEMENTATION - DEPRECATED
@@ -150,10 +86,10 @@ router.post(
 /**
  * POST /auth/register
  * 
- * New verification-based registration flow:
- * 1. User provides email verification code (sent via email)
- * 2. Alumni must provide valid invitation code
- * 3. Students are pending approval
+ * Registration flow:
+ * 1. Students: name, studentId, email, password - no verification code required
+ * 2. Alumni: name, email, password, invitation code - no verification code required
+ * 3. Students are pending approval (can login but cannot browse mentors until approved)
  * 4. Alumni are auto-approved
  */
 router.post(
@@ -162,24 +98,31 @@ router.post(
     try {
       const {
         email,
-        verificationCode,
         password,
         role,
         invitationCode,
         name,
+        studentId,
       } = req.body as {
         email?: string;
-        verificationCode?: string;
         password?: string;
         role?: UserRole;
         invitationCode?: string;
         name?: string;
+        studentId?: string;
       };
 
       // 1. Validate required fields
-      if (!email || !verificationCode || !password || !role) {
+      if (!email || !password || !role) {
         return res.status(400).json({
-          error: "Email, verification code, password, and role are required",
+          error: "Email, password, and role are required",
+        });
+      }
+
+      // 1.1. For students, studentId is required
+      if (role === "student" && !studentId) {
+        return res.status(400).json({
+          error: "Student ID is required for student registration",
         });
       }
 
@@ -207,7 +150,8 @@ router.post(
       }
 
       // 5. Validate password strength
-      // Must have: at least 8 chars, >=1 uppercase, >=1 lowercase, >=1 number, >=1 special char
+      // Must have: at least 8 characters, >=1 uppercase, >=1 special char
+      // Cannot have: spaces, <, or >
       if (password.length < 8) {
         return res.status(400).json({
           error: "Password must be at least 8 characters long",
@@ -215,25 +159,28 @@ router.post(
       }
 
       const hasUppercase = /[A-Z]/.test(password);
-      const hasLowercase = /[a-z]/.test(password);
-      const hasNumber = /[0-9]/.test(password);
       const hasSpecialChar = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password);
+      const hasInvalidChar = /[\s<>]/.test(password);
 
-      if (!hasUppercase || !hasLowercase || !hasNumber || !hasSpecialChar) {
+      if (!hasUppercase) {
         return res.status(400).json({
-          error: "Password must include at least one uppercase letter, one lowercase letter, one number, and one special character",
+          error: "Password must include at least one uppercase letter",
         });
       }
 
-      // 6. Validate verification code format (exactly 6 numeric digits)
-      const verificationCodeRegex = /^\d{6}$/;
-      if (!verificationCodeRegex.test(verificationCode)) {
+      if (!hasSpecialChar) {
         return res.status(400).json({
-          error: "Verification code must be exactly 6 numeric digits",
+          error: "Password must include at least one special character",
         });
       }
 
-      // 7. Check if user already exists
+      if (hasInvalidChar) {
+        return res.status(400).json({
+          error: "Password cannot contain spaces, <, or > characters",
+        });
+      }
+
+      // 6. Check if user already exists
       const existingUser = await prisma.user.findUnique({
         where: { email: normalisedEmail },
       });
@@ -242,43 +189,21 @@ router.post(
         return res.status(400).json({ error: "User already exists" });
       }
 
-      // 8. Verify email verification code
-      const verification = await prisma.emailVerification.findFirst({
-        where: {
-          email: normalisedEmail,
-          code: verificationCode,
-        },
-        orderBy: {
-          createdAt: "desc",
-        },
-      });
+      // 6.1. For students, check if studentId already exists
+      if (role === "student" && studentId) {
+        const existingStudentId = await prisma.user.findFirst({
+          where: {
+            role: "student",
+            studentId: studentId.trim(),
+          },
+        });
 
-      // Check if verification record exists, is unused, and not expired
-      if (!verification) {
-        return res
-          .status(400)
-          .json({ error: "Invalid or expired verification code" });
+        if (existingStudentId) {
+          return res.status(400).json({ error: "Student ID already registered" });
+        }
       }
 
-      if (verification.usedAt !== null) {
-        return res
-          .status(400)
-          .json({ error: "Verification code already used" });
-      }
-
-      if (verification.expiresAt < new Date()) {
-        return res
-          .status(400)
-          .json({ error: "Invalid or expired verification code" });
-      }
-
-      // 9. Mark verification as used
-      await prisma.emailVerification.update({
-        where: { id: verification.id },
-        data: { usedAt: new Date() },
-      });
-
-      // 10. Handle alumni-specific validation
+      // 7. Handle alumni-specific validation
       let approvalStatus = "pending";
 
       if (role === "alumni") {
@@ -306,13 +231,13 @@ router.post(
         approvalStatus = "pending";
       }
 
-      // 11. Hash password
+      // 8. Hash password
       const passwordHash = await bcrypt.hash(password, 10);
 
-      // 12. Determine user name (fallback to email prefix if not provided)
+      // 9. Determine user name (fallback to email prefix if not provided)
       const displayName = name || normalisedEmail.split("@")[0];
 
-      // 13. Create user
+      // 10. Create user
       const newUser = await prisma.user.create({
         data: {
           name: displayName,
@@ -320,6 +245,7 @@ router.post(
           passwordHash,
           role,
           approvalStatus,
+          studentId: role === "student" && studentId ? studentId.trim() : null,
         },
         select: {
           id: true,

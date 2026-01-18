@@ -42,12 +42,8 @@ router.post(
           .json({ error: "Invalid email or password" });
       }
 
-      // 4) Check approval status (admins bypass approval check)
-      if (user.role !== "admin" && user.approvalStatus !== "approved") {
-        return res
-          .status(403)
-          .json({ error: "Your account is not approved yet. Please wait for admin approval." });
-      }
+      // 4) Allow all users to login (students can login even if pending approval)
+      // Approval status checks will be handled at the feature level (e.g., browse mentors)
 
       // 5) Generate JWT
       const jwtSecret = process.env.JWT_SECRET;

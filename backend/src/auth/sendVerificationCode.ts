@@ -1,5 +1,6 @@
 import { Router, Request, Response } from "express";
 import prisma from "../prisma";
+import { sendVerificationCodeEmail } from "../services/emailService";
 
 const router = Router();
 
@@ -15,9 +16,9 @@ function generateVerificationCode(): string {
  *
  * Generate and store a verification code for the provided email.
  * The code expires in 10 minutes.
- *
- * For testing purposes, the code is logged to console.
- * In production, this should send via email service.
+ * 
+ * Sends verification code via email. If SMTP is not configured,
+ * uses test account (ethereal.email) for development.
  *
  * Body: { email: string }
  */
@@ -51,8 +52,30 @@ router.post(
         },
       });
 
-      // 6. Log code for testing (in production, send via email service)
-      console.log(`Verification code for ${normalisedEmail}: ${code}`);
+      // 6. Send verification code via email
+      // Check if SMTP is configured
+      const isSMTPConfigured = !!(process.env.SMTP_HOST && process.env.SMTP_PORT && process.env.SMTP_USER && process.env.SMTP_PASSWORD);
+      
+      try {
+        const emailResult = await sendVerificationCodeEmail(normalisedEmail, code);
+        
+        if (!isSMTPConfigured) {
+          // Test mode (no SMTP): log verification code to console
+          console.log(`\n========================================`);
+          console.log(`Verification code for ${normalisedEmail}: ${code}`);
+          console.log(`========================================\n`);
+        } else {
+          // Production mode: email sent successfully
+          console.log(`Verification code email sent to ${normalisedEmail}`);
+        }
+      } catch (emailError) {
+        console.error("Failed to send email, but code is saved:", emailError);
+        // Log code to console as fallback
+        console.log(`\n========================================`);
+        console.log(`Verification code for ${normalisedEmail}: ${code}`);
+        console.log(`========================================\n`);
+        // Continue - code is already saved in database
+      }
 
       // 7. Return success response
       return res.json({ message: "Verification code sent" });

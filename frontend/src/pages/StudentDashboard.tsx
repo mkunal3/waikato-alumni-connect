@@ -41,7 +41,7 @@ export function StudentDashboard() {
           setProfileData(null);
         }
 
-        if (matchResponse.status === 'fulfilled' && matchResponse.value) {
+        if (matchResponse.status === 'fulfilled' && matchResponse.value && matchResponse.value.match) {
           setMatchData(matchResponse.value.match);
         } else {
           setMatchData(null);

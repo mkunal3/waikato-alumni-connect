@@ -141,3 +141,18 @@ vite.config.ts.timestamp-*
 /src/generated/prisma
 
 .DS_Store
+
+# Build outputs
+frontend/build/
+dist/
+*.build
+
+# Upload directories
+backend/uploads/
+uploads/
+
+# Python scripts
+convert_to_docx.py
+
+# Assignment documents (keep local)
+WS4_Assignment.*

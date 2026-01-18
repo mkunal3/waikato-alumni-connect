@@ -654,17 +654,17 @@ router.get(
         return res.status(401).json({ error: "Unauthorized" });
       }
 
-      // 2) Get user role - if not in JWT, fetch from database
-      let userRole = req.role;
-      if (!userRole || (userRole !== "student" && userRole !== "alumni")) {
-        const user = await prisma.user.findUnique({
-          where: { id: req.userId },
-          select: { role: true },
-        });
-        if (user) {
-          userRole = user.role;
-        }
+      // 2) Get user role - always fetch from database to ensure accuracy
+      const user = await prisma.user.findUnique({
+        where: { id: req.userId },
+        select: { role: true },
+      });
+
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
       }
+
+      const userRole = user.role;
 
       // 3) Build query based on user role
       let match;

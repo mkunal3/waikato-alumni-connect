@@ -654,57 +654,39 @@ router.get(
         return res.status(401).json({ error: "Unauthorized" });
       }
 
-      // 2) Get user role - always fetch from database to ensure accuracy
-      const user = await prisma.user.findUnique({
-        where: { id: req.userId },
-        select: { role: true },
+      // 2) Try to find match as student first, then as alumni
+      let match = await prisma.match.findFirst({
+        where: {
+          studentId: req.userId,
+          status: {
+            in: ["confirmed", "accepted"],
+          },
+        },
+        orderBy: {
+          createdAt: 'desc',
+        },
+        include: {
+          student: {
+            select: { id: true, name: true, email: true },
+          },
+          alumni: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              currentCompany: true,
+              currentPosition: true,
+            },
+          },
+        },
       });
 
-      if (!user) {
-        return res.status(404).json({ error: "User not found" });
-      }
-
-      const userRole = user.role;
-
-      // 3) Build query based on user role
-      let match;
-
-      if (userRole === "student") {
-        // Student looking for their alumni mentor
-        // Show matches that are confirmed or accepted by the alumni
-        match = await prisma.match.findFirst({
-          where: {
-            studentId: req.userId,
-            status: {
-              in: ["confirmed", "accepted"], // Show both confirmed and accepted matches
-            },
-          },
-          orderBy: {
-            createdAt: 'desc', // Get the most recent match
-          },
-          include: {
-            student: {
-              select: { id: true, name: true, email: true },
-            },
-            alumni: {
-              select: {
-                id: true,
-                name: true,
-                email: true,
-                currentCompany: true,
-                currentPosition: true,
-              },
-            },
-          },
-        });
-        console.log(`[Student Match Query] userId: ${req.userId}, found match: ${match ? `id=${match.id}, status=${match.status}` : 'null'}`);
-      } else if (userRole === "alumni") {
-        // Alumni looking for their student mentee
-        // Only show matches that have been accepted by the alumni (status: "accepted")
+      // If not found as student, try as alumni
+      if (!match) {
         match = await prisma.match.findFirst({
           where: {
             alumniId: req.userId,
-            status: "accepted", // Only show matches that alumni has accepted
+            status: "accepted",
           },
           include: {
             student: {
@@ -721,11 +703,6 @@ router.get(
             },
           },
         });
-      } else {
-        // Other roles (e.g., admin) cannot view personal matches
-        return res
-          .status(400)
-          .json({ error: "Only students or alumni can view their match" });
       }
 
       // 3) Return match (null if not found, 200 OK in either case)

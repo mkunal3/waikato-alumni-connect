@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, PropsWithChildren } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, PropsWithChildren } from 'react';
 import { API_ENDPOINTS, apiRequest } from '../config/api';
 import { User, LoginRequest, LoginResponse, MeResponse } from '../types/auth';
 
@@ -22,6 +22,25 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  const logout = useCallback(() => {
+    setToken(null);
+    setUser(null);
+    localStorage.removeItem(AUTH_TOKEN_KEY);
+    localStorage.removeItem(AUTH_USER_KEY);
+  }, []);
+
+  // Listen for unauthorized events (token expired)
+  useEffect(() => {
+    const handleUnauthorized = () => {
+      logout();
+    };
+
+    window.addEventListener('auth:unauthorized', handleUnauthorized);
+    return () => {
+      window.removeEventListener('auth:unauthorized', handleUnauthorized);
+    };
+  }, [logout]);
+
   // Initialize auth state from localStorage
   useEffect(() => {
     const storedToken = localStorage.getItem(AUTH_TOKEN_KEY);
@@ -31,18 +50,13 @@ export function AuthProvider({ children }: PropsWithChildren) {
       try {
         setToken(storedToken);
         setUser(JSON.parse(storedUser));
-        // Verify token is still valid by fetching user profile
-        refreshUser().catch(() => {
-          // Token invalid, clear storage
-          logout();
-        });
       } catch (error) {
         console.error('Error parsing stored user:', error);
         logout();
       }
     }
     setIsLoading(false);
-  }, []);
+  }, [logout]);
 
   const login = async (credentials: LoginRequest): Promise<User> => {
     try {
@@ -67,15 +81,9 @@ export function AuthProvider({ children }: PropsWithChildren) {
     }
   };
 
-  const logout = () => {
-    setToken(null);
-    setUser(null);
-    localStorage.removeItem(AUTH_TOKEN_KEY);
-    localStorage.removeItem(AUTH_USER_KEY);
-  };
-
-  const refreshUser = async (): Promise<void> => {
-    if (!token) return;
+  const refreshUser = useCallback(async (): Promise<void> => {
+    const currentToken = token || localStorage.getItem(AUTH_TOKEN_KEY);
+    if (!currentToken) return;
 
     try {
       const response = await apiRequest<MeResponse>(API_ENDPOINTS.me);
@@ -87,7 +95,20 @@ export function AuthProvider({ children }: PropsWithChildren) {
       logout();
       throw error;
     }
-  };
+  }, [token, logout]);
+
+  // Verify token on mount if token exists
+  useEffect(() => {
+    const storedToken = localStorage.getItem(AUTH_TOKEN_KEY);
+    const storedUser = localStorage.getItem(AUTH_USER_KEY);
+    
+    if (storedToken && storedUser && !user) {
+      // Verify token is still valid by fetching user profile
+      refreshUser().catch(() => {
+        // Token invalid, already handled by refreshUser
+      });
+    }
+  }, [refreshUser, user]); // Include dependencies
 
   const value: AuthContextType = {
     user,

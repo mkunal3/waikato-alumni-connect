@@ -1,77 +1,82 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
-generator client {
-  provider = "prisma-client-js"
-}
-
-// OLD USER MODEL - DEPRECATED
-// model User {
-//   id            Int      @id @default(autoincrement())
-//   name          String
-//   email         String   @unique
-//   role          String   // student / alumni / admin
-//   passwordHash  String
-//   approvalStatus String  @default("pending") // pending / approved / rejected
-//   createdAt     DateTime @default(now())
-// }
-
 model User {
-  id             Int      @id @default(autoincrement())
-  name           String
-  email          String   @unique
-  role           String // student / alumni / admin
-  passwordHash   String
-  approvalStatus String   @default("pending") // pending / approved / rejected
-  createdAt      DateTime @default(now())
-
-  // Student-specific fields
-  studentId   String?
-  degree      String?
-  yearOfStudy Int?
-
-  // Alumni-specific fields
-  graduationYear  Int?
-  currentCompany  String?
-  currentPosition String?
-
-  // Additional profile fields
-  expectedGraduation String?
+  id                 Int       @id @default(autoincrement())
+  email              String    @unique
+  name               String
+  role               String
+  createdAt          DateTime  @default(now())
+  approvalStatus     String    @default("pending")
+  passwordHash       String
+  currentCompany     String?
+  currentPosition    String?
+  degree             String?
+  graduationYear     Int?
+  mentoringGoals     String[]
+  skillsOffered      String[]
+  skillsWanted       String[]
+  studentId          String?
+  yearOfStudy        Int?
   academicFocus      String?
   cvFileName         String?
   cvFilePath         String?
   cvUploadedAt       DateTime?
-
-  // Matching fields (JSON arrays)
-  mentoringGoals String[] // Career goals, skill development, etc.
-  skillsOffered  String[] // Skills alumni can teach
-  skillsWanted   String[] // Skills students want to learn
-
-  // Relations
-  studentMatches   Match[] @relation("StudentMatches")
-  alumniMatches    Match[] @relation("AlumniMatches")
-  confirmedMatches Match[] @relation("ConfirmedMatches")
+  expectedGraduation String?
+  about              String?
+  location           String?
+  linkedInUrl        String?
+  githubUrl          String?
+  portfolioUrl       String?
+  gpa                String?
+  languages          String[]
+  interests          String[]
+  workExperience     Json?
+  projects           Json?
+  certifications     Json?
+  contactEmail       String?
+  alumniMatches      Match[]   @relation("AlumniMatches")
+  confirmedMatches   Match[]   @relation("ConfirmedMatches")
+  studentMatches     Match[]   @relation("StudentMatches")
+  sentMessages       Message[]
 }
 
 model Match {
   id            Int       @id @default(autoincrement())
   studentId     Int
   alumniId      Int
-  status        String    @default("pending") // pending / confirmed / completed / ended
-  matchScore    Float? // 0-100 compatibility score
-  matchReasons  String[] // Why this match was suggested
-  confirmedById Int? // Admin user who confirmed the match
+  status        String    @default("pending")
+  matchScore    Float?
+  matchReasons  String[]
+  coverLetter   String?
+  confirmedById Int?
   confirmedAt   DateTime?
   createdAt     DateTime  @default(now())
-
-  // Relations
-  student     User  @relation("StudentMatches", fields: [studentId], references: [id], onDelete: Cascade)
-  alumni      User  @relation("AlumniMatches", fields: [alumniId], references: [id], onDelete: Cascade)
-  confirmedBy User? @relation("ConfirmedMatches", fields: [confirmedById], references: [id], onDelete: SetNull)
+  alumni        User      @relation("AlumniMatches", fields: [alumniId], references: [id], onDelete: Cascade)
+  confirmedBy   User?     @relation("ConfirmedMatches", fields: [confirmedById], references: [id])
+  student       User      @relation("StudentMatches", fields: [studentId], references: [id], onDelete: Cascade)
+  messages      Message[]
 
   @@unique([studentId, alumniId])
+}
+
+model Message {
+  id        Int      @id @default(autoincrement())
+  matchId   Int
+  senderId  Int
+  content   String
+  createdAt DateTime @default(now())
+  match     Match    @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  sender    User     @relation(fields: [senderId], references: [id], onDelete: Cascade)
+
+  @@index([matchId])
+  @@index([createdAt])
 }
 
 model EmailVerification {

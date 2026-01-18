@@ -667,6 +667,9 @@ router.get(
               in: ["confirmed", "accepted"], // Show both confirmed and accepted matches
             },
           },
+          orderBy: {
+            createdAt: 'desc', // Get the most recent match
+          },
           include: {
             student: {
               select: { id: true, name: true, email: true },
@@ -682,6 +685,7 @@ router.get(
             },
           },
         });
+        console.log(`[Student Match Query] userId: ${req.userId}, found match: ${match ? `id=${match.id}, status=${match.status}` : 'null'}`);
       } else if (req.role === "alumni") {
         // Alumni looking for their student mentee
         // Only show matches that have been accepted by the alumni (status: "accepted")

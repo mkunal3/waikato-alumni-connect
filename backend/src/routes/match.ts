@@ -664,10 +664,7 @@ router.get(
         return res.status(404).json({ error: "User not found" });
       }
 
-      const userRole = user.role?.trim().toLowerCase();
-
-      // Debug logging
-      console.log(`[Match /my] userId: ${req.userId}, role from DB: ${userRole}`);
+      const userRole = user.role;
 
       // 3) Build query based on user role
       let match;

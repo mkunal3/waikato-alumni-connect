@@ -106,6 +106,100 @@ router.get(
 );
 
 /**
+ * GET /my
+ * 
+ * Fetch the authenticated user's confirmed match.
+ * Students can fetch their alumni mentor, alumni can fetch their student mentee.
+ * Returns 200 with match: null if no match found.
+ * 
+ * Requires authentication.
+ */
+router.get(
+  "/my",
+  authenticate,
+  async (req: AuthRequest, res: Response): Promise<Response | void> => {
+    try {
+      // 1) Verify userId is present
+      if (!req.userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      // 2) Try to find match as student first, then as alumni
+      let match = await prisma.match.findFirst({
+        where: {
+          studentId: req.userId,
+          status: {
+            in: ["confirmed", "accepted"],
+          },
+        },
+        orderBy: {
+          createdAt: 'desc',
+        },
+        include: {
+          student: {
+            select: { id: true, name: true, email: true },
+          },
+          alumni: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              currentCompany: true,
+              currentPosition: true,
+            },
+          },
+        },
+      });
+
+      // If not found as student, try as alumni
+      if (!match) {
+        match = await prisma.match.findFirst({
+          where: {
+            alumniId: req.userId,
+            status: "accepted",
+          },
+          include: {
+            student: {
+              select: { id: true, name: true, email: true },
+            },
+            alumni: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+                currentCompany: true,
+                currentPosition: true,
+              },
+            },
+          },
+        });
+      }
+
+      // 3) Return match (null if not found, 200 OK in either case)
+      if (!match) {
+        return res.json({ match: null });
+      }
+
+      // 4) Return the confirmed match with alumni details
+      return res.json({
+        match: {
+          id: match.id,
+          status: match.status,
+          matchScore: match.matchScore,
+          matchReasons: match.matchReasons,
+          confirmedAt: match.confirmedAt,
+          student: match.student,
+          alumni: match.alumni,
+        },
+      });
+    } catch (error) {
+      console.error("Error fetching my match:", error);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  }
+);
+
+/**
  * GET /:menteeId
  * 
  * Fetch a student mentee and return all approved alumni mentors
@@ -630,100 +724,6 @@ router.post(
       });
     } catch (error) {
       console.error("Error confirming match:", error);
-      return res.status(500).json({ error: "Internal server error" });
-    }
-  }
-);
-
-/**
- * GET /my
- * 
- * Fetch the authenticated user's confirmed match.
- * Students can fetch their alumni mentor, alumni can fetch their student mentee.
- * Returns 200 with match: null if no match found.
- * 
- * Requires authentication.
- */
-router.get(
-  "/my",
-  authenticate,
-  async (req: AuthRequest, res: Response): Promise<Response | void> => {
-    try {
-      // 1) Verify userId is present
-      if (!req.userId) {
-        return res.status(401).json({ error: "Unauthorized" });
-      }
-
-      // 2) Try to find match as student first, then as alumni
-      let match = await prisma.match.findFirst({
-        where: {
-          studentId: req.userId,
-          status: {
-            in: ["confirmed", "accepted"],
-          },
-        },
-        orderBy: {
-          createdAt: 'desc',
-        },
-        include: {
-          student: {
-            select: { id: true, name: true, email: true },
-          },
-          alumni: {
-            select: {
-              id: true,
-              name: true,
-              email: true,
-              currentCompany: true,
-              currentPosition: true,
-            },
-          },
-        },
-      });
-
-      // If not found as student, try as alumni
-      if (!match) {
-        match = await prisma.match.findFirst({
-          where: {
-            alumniId: req.userId,
-            status: "accepted",
-          },
-          include: {
-            student: {
-              select: { id: true, name: true, email: true },
-            },
-            alumni: {
-              select: {
-                id: true,
-                name: true,
-                email: true,
-                currentCompany: true,
-                currentPosition: true,
-              },
-            },
-          },
-        });
-      }
-
-      // 3) Return match (null if not found, 200 OK in either case)
-      if (!match) {
-        return res.json({ match: null });
-      }
-
-      // 4) Return the confirmed match with alumni details
-      return res.json({
-        match: {
-          id: match.id,
-          status: match.status,
-          matchScore: match.matchScore,
-          matchReasons: match.matchReasons,
-          confirmedAt: match.confirmedAt,
-          student: match.student,
-          alumni: match.alumni,
-        },
-      });
-    } catch (error) {
-      console.error("Error fetching my match:", error);
       return res.status(500).json({ error: "Internal server error" });
     }
   }

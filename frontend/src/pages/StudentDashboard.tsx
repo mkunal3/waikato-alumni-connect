@@ -31,7 +31,7 @@ export function StudentDashboard() {
 
         const [profileResponse, matchResponse, cvResponse] = await Promise.allSettled([
           apiRequest<ProfileResponse>(API_ENDPOINTS.profile),
-          apiRequest<MatchResponse>(API_ENDPOINTS.myMatch).catch(() => null),
+          apiRequest<MatchResponse>(API_ENDPOINTS.myMatch),
           apiRequest<{ uploaded: boolean; fileName: string | null }>(API_ENDPOINTS.getCV).catch(() => null)
         ]);
 

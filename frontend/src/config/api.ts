@@ -121,6 +121,7 @@ export async function apiRequest<T>(
         errorData = { error: `HTTP error! status: ${response.status}` };
       }
       const errorMessage = errorData.error || errorData.message || `HTTP error! status: ${response.status}`;
+      console.error(`API Error [${endpoint}]:`, { status: response.status, errorData, errorMessage });
       throw new Error(errorMessage);
     }
 
@@ -147,6 +148,7 @@ export async function apiRequest<T>(
         errorData = { error: `HTTP error! status: ${response.status}` };
       }
       const errorMessage = errorData.error || errorData.message || `HTTP error! status: ${response.status}`;
+      console.error(`API Error [${endpoint}]:`, { status: response.status, errorData, errorMessage });
       throw new Error(errorMessage);
     }
 

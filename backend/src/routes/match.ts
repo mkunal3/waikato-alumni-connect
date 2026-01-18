@@ -666,6 +666,9 @@ router.get(
 
       const userRole = user.role;
 
+      // Debug logging
+      console.log(`[Match /my] userId: ${req.userId}, role from DB: ${userRole}`);
+
       // 3) Build query based on user role
       let match;
 

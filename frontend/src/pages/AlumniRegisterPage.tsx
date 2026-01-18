@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Eye, EyeOff } from 'lucide-react';
 import { WaikatoNavigation } from '../components/WaikatoNavigation';
-import { API_BASE_URL, API_ENDPOINTS } from '../config/api';
+import { apiRequest, API_ENDPOINTS } from '../config/api';
 
 export function AlumniRegisterPage() {
   const navigate = useNavigate();
@@ -10,57 +10,20 @@ export function AlumniRegisterPage() {
   const [formData, setFormData] = useState({
     invitationCode: '',
     email: '',
-    verificationCode: '',
     password: '',
     confirmPassword: ''
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [showPasswordRequirements, setShowPasswordRequirements] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [codeSent, setCodeSent] = useState(false);
-  const [sendingCode, setSendingCode] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setFormData({
       ...formData,
       [e.target.name]: e.target.value
     });
-  };
-
-  const handleSendCode = async () => {
-    setError(null);
-    
-    if (!formData.invitationCode.trim()) {
-      setError('Please enter invitation code first');
-      return;
-    }
-
-    if (!formData.email) {
-      setError('Please enter your email address');
-      return;
-    }
-
-    setSendingCode(true);
-
-    try {
-      // TODO: Call backend API to send verification code
-      // const response = await fetch(`${API_BASE_URL}/auth/send-verification-code`, {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({ email: formData.email, invitationCode: formData.invitationCode })
-      // });
-      
-      // Simulate API call for now
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      setCodeSent(true);
-      alert('Verification code sent to your email!');
-    } catch (err) {
-      setError('Failed to send verification code. Please try again.');
-    } finally {
-      setSendingCode(false);
-    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -70,16 +33,6 @@ export function AlumniRegisterPage() {
     // Validation
     if (!formData.invitationCode.trim()) {
       setError('Invitation code is required');
-      return;
-    }
-
-    if (!codeSent) {
-      setError('Please send verification code first');
-      return;
-    }
-
-    if (!formData.verificationCode.trim()) {
-      setError('Please enter verification code');
       return;
     }
 
@@ -93,28 +46,41 @@ export function AlumniRegisterPage() {
       return;
     }
 
+    // Password validation
+    const hasUppercase = /[A-Z]/.test(formData.password);
+    const hasSpecialChar = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(formData.password);
+    const hasInvalidChar = /[\s<>]/.test(formData.password); // No spaces, <, or >
+
+    if (!hasUppercase) {
+      setError('Password must include at least one uppercase letter');
+      return;
+    }
+
+    if (!hasSpecialChar) {
+      setError('Password must include at least one special character');
+      return;
+    }
+
+    if (hasInvalidChar) {
+      setError('Password cannot contain spaces, <, or > characters');
+      return;
+    }
+
     setIsLoading(true);
 
     try {
-      const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.REGISTER}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          invitationCode: formData.invitationCode,
-          email: formData.email,
-          verificationCode: formData.verificationCode,
-          password: formData.password,
-          role: 'alumni'
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Registration failed');
-      }
+      await apiRequest<{ message: string; user: any }>(
+        API_ENDPOINTS.register,
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            invitationCode: formData.invitationCode,
+            email: formData.email,
+            password: formData.password,
+            role: 'alumni'
+          }),
+        }
+      );
 
       // Registration successful - show success message and redirect to login
       alert('Registration successful! You can now log in to your account.');
@@ -125,12 +91,10 @@ export function AlumniRegisterPage() {
       
       if (err instanceof Error) {
         errorMessage = err.message;
-        if (err.message.includes('Failed to fetch') || err.message.includes('NetworkError')) {
-          errorMessage = 'Cannot connect to server. Please check if the backend is running.';
-        }
       }
       
       setError(errorMessage);
+    } finally {
       setIsLoading(false);
     }
   };
@@ -180,59 +144,18 @@ export function AlumniRegisterPage() {
                 <label htmlFor="email" style={{ display: 'block', color: '#4B5563', marginBottom: '8px', fontWeight: '500' }}>
                   Email Address *
                 </label>
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  <input
-                    type="email"
-                    id="email"
-                    name="email"
-                    value={formData.email}
-                    onChange={handleChange}
-                    placeholder="your.email@example.com"
-                    style={{ flex: 1, padding: '12px 16px', border: '1px solid #D1D5DB', borderRadius: '8px', outline: 'none' }}
-                    required
-                    disabled={isLoading || codeSent}
-                  />
-                  <button
-                    type="button"
-                    onClick={handleSendCode}
-                    disabled={sendingCode || codeSent || isLoading}
-                    style={{
-                      padding: '12px 24px',
-                      backgroundColor: codeSent ? '#10B981' : '#D50000',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '8px',
-                      cursor: (sendingCode || codeSent || isLoading) ? 'not-allowed' : 'pointer',
-                      opacity: (sendingCode || codeSent || isLoading) ? 0.6 : 1,
-                      whiteSpace: 'nowrap',
-                      fontWeight: '500'
-                    }}
-                  >
-                    {sendingCode ? 'Sending...' : codeSent ? 'Code Sent' : 'Send Code'}
-                  </button>
-                </div>
+                <input
+                  type="email"
+                  id="email"
+                  name="email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  placeholder="your.email@example.com"
+                  style={{ width: '100%', padding: '12px 16px', border: '1px solid #D1D5DB', borderRadius: '8px', outline: 'none' }}
+                  required
+                  disabled={isLoading}
+                />
               </div>
-
-              {/* Verification Code */}
-              {codeSent && (
-                <div>
-                  <label htmlFor="verificationCode" style={{ display: 'block', color: '#4B5563', marginBottom: '8px', fontWeight: '500' }}>
-                    Verification Code *
-                  </label>
-                  <input
-                    type="text"
-                    id="verificationCode"
-                    name="verificationCode"
-                    value={formData.verificationCode}
-                    onChange={handleChange}
-                    placeholder="Enter 6-digit code"
-                    maxLength={6}
-                    style={{ width: '100%', padding: '12px 16px', border: '1px solid #D1D5DB', borderRadius: '8px', outline: 'none' }}
-                    required
-                    disabled={isLoading}
-                  />
-                </div>
-              )}
 
               {/* Password */}
               <div>
@@ -246,7 +169,12 @@ export function AlumniRegisterPage() {
                     name="password"
                     value={formData.password}
                     onChange={handleChange}
-                    placeholder="At least 8 characters"
+                    onFocus={() => setShowPasswordRequirements(true)}
+                    onBlur={() => {
+                      // Delay hiding to allow clicking on requirements
+                      setTimeout(() => setShowPasswordRequirements(false), 200);
+                    }}
+                    placeholder="Enter your password"
                     style={{ width: '100%', padding: '12px 48px 12px 16px', border: '1px solid #D1D5DB', borderRadius: '8px', outline: 'none' }}
                     required
                     disabled={isLoading}
@@ -260,6 +188,142 @@ export function AlumniRegisterPage() {
                     {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                   </button>
                 </div>
+                {/* Password Requirements Popup */}
+                {showPasswordRequirements && (() => {
+                  const hasUppercase = /[A-Z]/.test(formData.password);
+                  const hasSpecialChar = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(formData.password);
+                  const hasInvalidChar = /[\s<>]/.test(formData.password);
+                  
+                  return (
+                    <div style={{
+                      marginTop: '8px',
+                      padding: '12px',
+                      backgroundColor: 'white',
+                      border: '1px solid #E5E7EB',
+                      borderRadius: '8px',
+                      boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+                      zIndex: 10
+                    }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span style={{ 
+                            display: 'inline-block',
+                            width: '18px',
+                            height: '18px',
+                            borderRadius: '50%',
+                            border: `2px solid ${formData.password.length >= 8 ? '#10B981' : '#D1D5DB'}`,
+                            backgroundColor: formData.password.length >= 8 ? '#10B981' : 'transparent',
+                            position: 'relative'
+                          }}>
+                            {formData.password.length >= 8 && (
+                              <span style={{
+                                position: 'absolute',
+                                top: '50%',
+                                left: '50%',
+                                transform: 'translate(-50%, -50%)',
+                                color: 'white',
+                                fontSize: '12px',
+                                fontWeight: 'bold'
+                              }}>✓</span>
+                            )}
+                          </span>
+                          <span style={{ fontSize: '14px', color: formData.password.length >= 8 ? '#10B981' : '#6B7280' }}>
+                            At least 8 characters
+                          </span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span style={{ 
+                            display: 'inline-block',
+                            width: '18px',
+                            height: '18px',
+                            borderRadius: '50%',
+                            border: `2px solid ${hasUppercase ? '#10B981' : '#D1D5DB'}`,
+                            backgroundColor: hasUppercase ? '#10B981' : 'transparent',
+                            position: 'relative'
+                          }}>
+                            {hasUppercase && (
+                              <span style={{
+                                position: 'absolute',
+                                top: '50%',
+                                left: '50%',
+                                transform: 'translate(-50%, -50%)',
+                                color: 'white',
+                                fontSize: '12px',
+                                fontWeight: 'bold'
+                              }}>✓</span>
+                            )}
+                          </span>
+                          <span style={{ fontSize: '14px', color: hasUppercase ? '#10B981' : '#6B7280' }}>
+                            At least one uppercase letter
+                          </span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span style={{ 
+                            display: 'inline-block',
+                            width: '18px',
+                            height: '18px',
+                            borderRadius: '50%',
+                            border: `2px solid ${hasSpecialChar ? '#10B981' : '#D1D5DB'}`,
+                            backgroundColor: hasSpecialChar ? '#10B981' : 'transparent',
+                            position: 'relative'
+                          }}>
+                            {hasSpecialChar && (
+                              <span style={{
+                                position: 'absolute',
+                                top: '50%',
+                                left: '50%',
+                                transform: 'translate(-50%, -50%)',
+                                color: 'white',
+                                fontSize: '12px',
+                                fontWeight: 'bold'
+                              }}>✓</span>
+                            )}
+                          </span>
+                          <span style={{ fontSize: '14px', color: hasSpecialChar ? '#10B981' : '#6B7280' }}>
+                            At least one special character
+                          </span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span style={{ 
+                            display: 'inline-block',
+                            width: '18px',
+                            height: '18px',
+                            borderRadius: '50%',
+                            border: `2px solid ${!hasInvalidChar ? '#10B981' : '#EF4444'}`,
+                            backgroundColor: !hasInvalidChar ? '#10B981' : 'transparent',
+                            position: 'relative'
+                          }}>
+                            {!hasInvalidChar && (
+                              <span style={{
+                                position: 'absolute',
+                                top: '50%',
+                                left: '50%',
+                                transform: 'translate(-50%, -50%)',
+                                color: 'white',
+                                fontSize: '12px',
+                                fontWeight: 'bold'
+                              }}>✓</span>
+                            )}
+                            {hasInvalidChar && (
+                              <span style={{
+                                position: 'absolute',
+                                top: '50%',
+                                left: '50%',
+                                transform: 'translate(-50%, -50%)',
+                                color: '#EF4444',
+                                fontSize: '12px',
+                                fontWeight: 'bold'
+                              }}>✗</span>
+                            )}
+                          </span>
+                          <span style={{ fontSize: '14px', color: !hasInvalidChar ? '#10B981' : '#EF4444' }}>
+                            No spaces, &lt;, or &gt;
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
 
               {/* Confirm Password */}

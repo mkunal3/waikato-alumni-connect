@@ -38,14 +38,8 @@ export function LoginPage() {
     try {
       const loggedInUser = await login({ email, password });
       
-      // Navigate directly based on user role
-      const roleDashboardMap: Record<string, string> = {
-        student: '/student/dashboard',
-        alumni: '/mentor/dashboard',
-        admin: '/admin/dashboard',
-      };
-      const dashboardRoute = roleDashboardMap[loggedInUser.role] || '/dashboard';
-      navigate(dashboardRoute, { replace: true });
+      // Navigate back to home page after login
+      navigate('/', { replace: true });
     } catch (err) {
       console.error('Login error details:', err);
       let errorMessage = 'Login failed. Please try again.';

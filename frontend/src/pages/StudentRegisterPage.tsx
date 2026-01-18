@@ -2,23 +2,24 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Eye, EyeOff } from 'lucide-react';
 import { WaikatoNavigation } from '../components/WaikatoNavigation';
-import { API_BASE_URL, API_ENDPOINTS } from '../config/api';
+import { apiRequest, API_ENDPOINTS } from '../config/api';
 
 export function StudentRegisterPage() {
   const navigate = useNavigate();
   
   const [formData, setFormData] = useState({
-    email: '',
-    verificationCode: '',
+    firstName: '',
+    lastName: '',
+    studentId: '',
+    emailPrefix: '',
     password: '',
     confirmPassword: ''
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [showPasswordRequirements, setShowPasswordRequirements] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [codeSent, setCodeSent] = useState(false);
-  const [sendingCode, setSendingCode] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setFormData({
@@ -27,55 +28,35 @@ export function StudentRegisterPage() {
     });
   };
 
-  const handleSendCode = async () => {
-    setError(null);
-    
-    if (!formData.email) {
-      setError('Please enter your email address');
-      return;
-    }
-
-    if (!formData.email.endsWith('@students.waikato.ac.nz')) {
-      setError('Please use your Waikato student email (@students.waikato.ac.nz)');
-      return;
-    }
-
-    setSendingCode(true);
-
-    try {
-      // TODO: Call backend API to send verification code
-      // const response = await fetch(`${API_BASE_URL}/auth/send-verification-code`, {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({ email: formData.email })
-      // });
-      
-      // Simulate API call for now
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      setCodeSent(true);
-      alert('Verification code sent to your email!');
-    } catch (err) {
-      setError('Failed to send verification code. Please try again.');
-    } finally {
-      setSendingCode(false);
-    }
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
 
     // Validation
-    if (!codeSent) {
-      setError('Please send verification code first');
+    if (!formData.firstName.trim() || !formData.lastName.trim()) {
+      setError('Please enter your first and last name');
       return;
     }
 
-    if (!formData.verificationCode.trim()) {
-      setError('Please enter verification code');
+    if (!formData.studentId.trim()) {
+      setError('Please enter your student ID');
       return;
     }
+
+    if (!formData.emailPrefix.trim()) {
+      setError('Please enter your student email prefix');
+      return;
+    }
+
+    // Validate email prefix format (alphanumeric and dots/underscores)
+    const emailPrefixRegex = /^[a-zA-Z0-9._-]+$/;
+    if (!emailPrefixRegex.test(formData.emailPrefix.trim())) {
+      setError('Email prefix can only contain letters, numbers, dots, underscores, and hyphens');
+      return;
+    }
+
+    // Combine prefix with domain
+    const fullEmail = `${formData.emailPrefix.trim()}@students.waikato.ac.nz`;
 
     if (formData.password !== formData.confirmPassword) {
       setError('Passwords do not match');
@@ -87,30 +68,47 @@ export function StudentRegisterPage() {
       return;
     }
 
+    // Password validation
+    const hasUppercase = /[A-Z]/.test(formData.password);
+    const hasSpecialChar = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(formData.password);
+    const hasInvalidChar = /[\s<>]/.test(formData.password); // No spaces, <, or >
+
+    if (!hasUppercase) {
+      setError('Password must include at least one uppercase letter');
+      return;
+    }
+
+    if (!hasSpecialChar) {
+      setError('Password must include at least one special character');
+      return;
+    }
+
+    if (hasInvalidChar) {
+      setError('Password cannot contain spaces, <, or > characters');
+      return;
+    }
+
     setIsLoading(true);
 
     try {
-      const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.REGISTER}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email: formData.email,
-          verificationCode: formData.verificationCode,
-          password: formData.password,
-          role: 'student'
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Registration failed');
-      }
+      const fullName = `${formData.firstName.trim()} ${formData.lastName.trim()}`.trim();
+      
+      await apiRequest<{ message: string; user: any }>(
+        API_ENDPOINTS.register,
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            name: fullName,
+            email: fullEmail,
+            studentId: formData.studentId.trim(),
+            password: formData.password,
+            role: 'student'
+          }),
+        }
+      );
 
       // Registration successful - show success message and redirect to login
-      alert('Registration successful! Please log in to continue.');
+      alert('Registration successful! Your account is pending admin approval. You can now log in to complete your profile.');
       navigate('/login');
     } catch (err) {
       console.error('Registration error:', err);
@@ -118,12 +116,10 @@ export function StudentRegisterPage() {
       
       if (err instanceof Error) {
         errorMessage = err.message;
-        if (err.message.includes('Failed to fetch') || err.message.includes('NetworkError')) {
-          errorMessage = 'Cannot connect to server. Please check if the backend is running.';
-        }
       }
       
       setError(errorMessage);
+    } finally {
       setIsLoading(false);
     }
   };
@@ -150,64 +146,100 @@ export function StudentRegisterPage() {
             )}
 
             <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-              {/* Email */}
+              {/* First Name */}
               <div>
-                <label htmlFor="email" style={{ display: 'block', color: '#4B5563', marginBottom: '8px', fontWeight: '500' }}>
-                  Student Email *
+                <label htmlFor="firstName" style={{ display: 'block', color: '#4B5563', marginBottom: '8px', fontWeight: '500' }}>
+                  First Name *
                 </label>
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  <input
-                    type="email"
-                    id="email"
-                    name="email"
-                    value={formData.email}
-                    onChange={handleChange}
-                    placeholder="abc123@students.waikato.ac.nz"
-                    style={{ flex: 1, padding: '12px 16px', border: '1px solid #D1D5DB', borderRadius: '8px', outline: 'none' }}
-                    required
-                    disabled={isLoading || codeSent}
-                  />
-                  <button
-                    type="button"
-                    onClick={handleSendCode}
-                    disabled={sendingCode || codeSent || isLoading}
-                    style={{
-                      padding: '12px 24px',
-                      backgroundColor: codeSent ? '#10B981' : '#D50000',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '8px',
-                      cursor: (sendingCode || codeSent || isLoading) ? 'not-allowed' : 'pointer',
-                      opacity: (sendingCode || codeSent || isLoading) ? 0.6 : 1,
-                      whiteSpace: 'nowrap',
-                      fontWeight: '500'
-                    }}
-                  >
-                    {sendingCode ? 'Sending...' : codeSent ? 'Code Sent' : 'Send Code'}
-                  </button>
-                </div>
+                <input
+                  type="text"
+                  id="firstName"
+                  name="firstName"
+                  value={formData.firstName}
+                  onChange={handleChange}
+                  placeholder="Enter your first name"
+                  style={{ width: '100%', padding: '12px 16px', border: '1px solid #D1D5DB', borderRadius: '8px', outline: 'none' }}
+                  required
+                  disabled={isLoading}
+                />
               </div>
 
-              {/* Verification Code */}
-              {codeSent && (
-                <div>
-                  <label htmlFor="verificationCode" style={{ display: 'block', color: '#4B5563', marginBottom: '8px', fontWeight: '500' }}>
-                    Verification Code *
-                  </label>
+              {/* Last Name */}
+              <div>
+                <label htmlFor="lastName" style={{ display: 'block', color: '#4B5563', marginBottom: '8px', fontWeight: '500' }}>
+                  Last Name *
+                </label>
+                <input
+                  type="text"
+                  id="lastName"
+                  name="lastName"
+                  value={formData.lastName}
+                  onChange={handleChange}
+                  placeholder="Enter your last name"
+                  style={{ width: '100%', padding: '12px 16px', border: '1px solid #D1D5DB', borderRadius: '8px', outline: 'none' }}
+                  required
+                  disabled={isLoading}
+                />
+              </div>
+
+              {/* Student ID */}
+              <div>
+                <label htmlFor="studentId" style={{ display: 'block', color: '#4B5563', marginBottom: '8px', fontWeight: '500' }}>
+                  Student ID *
+                </label>
+                <input
+                  type="text"
+                  id="studentId"
+                  name="studentId"
+                  value={formData.studentId}
+                  onChange={handleChange}
+                  placeholder="Enter your student ID"
+                  style={{ width: '100%', padding: '12px 16px', border: '1px solid #D1D5DB', borderRadius: '8px', outline: 'none' }}
+                  required
+                  disabled={isLoading}
+                />
+              </div>
+
+              {/* Email */}
+              <div>
+                <label htmlFor="emailPrefix" style={{ display: 'block', color: '#4B5563', marginBottom: '8px', fontWeight: '500' }}>
+                  Student Email *
+                </label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0', border: '1px solid #D1D5DB', borderRadius: '8px', overflow: 'hidden' }}>
                   <input
                     type="text"
-                    id="verificationCode"
-                    name="verificationCode"
-                    value={formData.verificationCode}
+                    id="emailPrefix"
+                    name="emailPrefix"
+                    value={formData.emailPrefix}
                     onChange={handleChange}
-                    placeholder="Enter 6-digit code"
-                    maxLength={6}
-                    style={{ width: '100%', padding: '12px 16px', border: '1px solid #D1D5DB', borderRadius: '8px', outline: 'none' }}
+                    placeholder="abc123"
+                    style={{ 
+                      flex: 1, 
+                      padding: '12px 16px', 
+                      border: 'none', 
+                      outline: 'none',
+                      borderRadius: '8px 0 0 8px'
+                    }}
                     required
                     disabled={isLoading}
                   />
+                  <span style={{ 
+                    padding: '12px 16px', 
+                    backgroundColor: '#F3F4F6', 
+                    color: '#6B7280', 
+                    fontSize: '14px',
+                    whiteSpace: 'nowrap',
+                    borderLeft: '1px solid #D1D5DB'
+                  }}>
+                    @students.waikato.ac.nz
+                  </span>
                 </div>
-              )}
+                {formData.emailPrefix && (
+                  <p style={{ marginTop: '6px', fontSize: '12px', color: '#6B7280' }}>
+                    Your email: <strong>{formData.emailPrefix.trim()}@students.waikato.ac.nz</strong>
+                  </p>
+                )}
+              </div>
 
               {/* Password */}
               <div>
@@ -221,7 +253,12 @@ export function StudentRegisterPage() {
                     name="password"
                     value={formData.password}
                     onChange={handleChange}
-                    placeholder="At least 8 characters"
+                    onFocus={() => setShowPasswordRequirements(true)}
+                    onBlur={() => {
+                      // Delay hiding to allow clicking on requirements
+                      setTimeout(() => setShowPasswordRequirements(false), 200);
+                    }}
+                    placeholder="Enter your password"
                     style={{ width: '100%', padding: '12px 48px 12px 16px', border: '1px solid #D1D5DB', borderRadius: '8px', outline: 'none' }}
                     required
                     disabled={isLoading}
@@ -235,6 +272,142 @@ export function StudentRegisterPage() {
                     {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                   </button>
                 </div>
+                {/* Password Requirements Popup */}
+                {showPasswordRequirements && (() => {
+                  const hasUppercase = /[A-Z]/.test(formData.password);
+                  const hasSpecialChar = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(formData.password);
+                  const hasInvalidChar = /[\s<>]/.test(formData.password);
+                  
+                  return (
+                    <div style={{
+                      marginTop: '8px',
+                      padding: '12px',
+                      backgroundColor: 'white',
+                      border: '1px solid #E5E7EB',
+                      borderRadius: '8px',
+                      boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+                      zIndex: 10
+                    }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span style={{ 
+                            display: 'inline-block',
+                            width: '18px',
+                            height: '18px',
+                            borderRadius: '50%',
+                            border: `2px solid ${formData.password.length >= 8 ? '#10B981' : '#D1D5DB'}`,
+                            backgroundColor: formData.password.length >= 8 ? '#10B981' : 'transparent',
+                            position: 'relative'
+                          }}>
+                            {formData.password.length >= 8 && (
+                              <span style={{
+                                position: 'absolute',
+                                top: '50%',
+                                left: '50%',
+                                transform: 'translate(-50%, -50%)',
+                                color: 'white',
+                                fontSize: '12px',
+                                fontWeight: 'bold'
+                              }}>✓</span>
+                            )}
+                          </span>
+                          <span style={{ fontSize: '14px', color: formData.password.length >= 8 ? '#10B981' : '#6B7280' }}>
+                            At least 8 characters
+                          </span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span style={{ 
+                            display: 'inline-block',
+                            width: '18px',
+                            height: '18px',
+                            borderRadius: '50%',
+                            border: `2px solid ${hasUppercase ? '#10B981' : '#D1D5DB'}`,
+                            backgroundColor: hasUppercase ? '#10B981' : 'transparent',
+                            position: 'relative'
+                          }}>
+                            {hasUppercase && (
+                              <span style={{
+                                position: 'absolute',
+                                top: '50%',
+                                left: '50%',
+                                transform: 'translate(-50%, -50%)',
+                                color: 'white',
+                                fontSize: '12px',
+                                fontWeight: 'bold'
+                              }}>✓</span>
+                            )}
+                          </span>
+                          <span style={{ fontSize: '14px', color: hasUppercase ? '#10B981' : '#6B7280' }}>
+                            At least one uppercase letter
+                          </span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span style={{ 
+                            display: 'inline-block',
+                            width: '18px',
+                            height: '18px',
+                            borderRadius: '50%',
+                            border: `2px solid ${hasSpecialChar ? '#10B981' : '#D1D5DB'}`,
+                            backgroundColor: hasSpecialChar ? '#10B981' : 'transparent',
+                            position: 'relative'
+                          }}>
+                            {hasSpecialChar && (
+                              <span style={{
+                                position: 'absolute',
+                                top: '50%',
+                                left: '50%',
+                                transform: 'translate(-50%, -50%)',
+                                color: 'white',
+                                fontSize: '12px',
+                                fontWeight: 'bold'
+                              }}>✓</span>
+                            )}
+                          </span>
+                          <span style={{ fontSize: '14px', color: hasSpecialChar ? '#10B981' : '#6B7280' }}>
+                            At least one special character
+                          </span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span style={{ 
+                            display: 'inline-block',
+                            width: '18px',
+                            height: '18px',
+                            borderRadius: '50%',
+                            border: `2px solid ${!hasInvalidChar ? '#10B981' : '#EF4444'}`,
+                            backgroundColor: !hasInvalidChar ? '#10B981' : 'transparent',
+                            position: 'relative'
+                          }}>
+                            {!hasInvalidChar && (
+                              <span style={{
+                                position: 'absolute',
+                                top: '50%',
+                                left: '50%',
+                                transform: 'translate(-50%, -50%)',
+                                color: 'white',
+                                fontSize: '12px',
+                                fontWeight: 'bold'
+                              }}>✓</span>
+                            )}
+                            {hasInvalidChar && (
+                              <span style={{
+                                position: 'absolute',
+                                top: '50%',
+                                left: '50%',
+                                transform: 'translate(-50%, -50%)',
+                                color: '#EF4444',
+                                fontSize: '12px',
+                                fontWeight: 'bold'
+                              }}>✗</span>
+                            )}
+                          </span>
+                          <span style={{ fontSize: '14px', color: !hasInvalidChar ? '#10B981' : '#EF4444' }}>
+                            No spaces, &lt;, or &gt;
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
 
               {/* Confirm Password */}

@@ -6,22 +6,10 @@ import { WaikatoHeroSection } from '../components/WaikatoHeroSection';
 import { WaikatoFooter } from '../components/WaikatoFooter';
 
 export function HomePage() {
-  const { isAuthenticated, user, isLoading } = useAuth();
-
-  // If user is logged in, redirect to their dashboard
-  if (!isLoading && isAuthenticated && user) {
-    const roleDashboardMap: Record<string, string> = {
-      student: '/student/dashboard',
-      alumni: '/mentor/dashboard',
-      admin: '/admin/dashboard',
-    };
-    const dashboardRoute = roleDashboardMap[user.role] || '/dashboard';
-    return <Navigate to={dashboardRoute} replace />;
-  }
-
-  // Show home page only for unauthenticated users
+  // Show home page for all users (logged in or not)
+  // The hero buttons will handle navigation based on auth state
   return (
-    <div className="min-h-screen bg-white">
+    <div style={{ minHeight: '100vh', backgroundColor: 'white' }}>
       <WaikatoNavigation />
       <main>
         <WaikatoHeroSection />

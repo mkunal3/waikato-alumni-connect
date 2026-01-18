@@ -655,6 +655,7 @@ router.get(
       }
 
       // 2) Build query based on user role
+      console.log(`[Match /my] userId: ${req.userId}, role: ${req.role}, email: ${req.email}`);
       let match;
 
       if (req.role === "student") {

@@ -1,6 +1,8 @@
 import { Router, Response, NextFunction } from "express";
 import prisma from "../prisma";
 import { authenticate, AuthRequest } from "../middleware/authMiddleware";
+import path from "path";
+import fs from "fs";
 
 const router = Router();
 
@@ -174,6 +176,117 @@ router.post(
 */
 
 /**
+ * GET /students
+ * 
+ * Fetch all students
+ * Requires admin role
+ */
+router.get(
+  "/students",
+  authenticate,
+  requireAdmin,
+  async (_req: AuthRequest, res: Response): Promise<Response | void> => {
+    try {
+      const students = await prisma.user.findMany({
+        where: {
+          role: "student",
+        },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          role: true,
+          approvalStatus: true,
+          createdAt: true,
+          studentId: true,
+          contactEmail: true,
+          degree: true,
+          yearOfStudy: true,
+          expectedGraduation: true,
+          academicFocus: true,
+          mentoringGoals: true,
+          skillsWanted: true,
+          cvFileName: true,
+          cvFilePath: true,
+          cvUploadedAt: true,
+          about: true,
+          location: true,
+          linkedInUrl: true,
+          githubUrl: true,
+          portfolioUrl: true,
+          gpa: true,
+          languages: true,
+          interests: true,
+          workExperience: true,
+          projects: true,
+          certifications: true,
+        },
+        orderBy: {
+          createdAt: "desc",
+        },
+      });
+
+      return res.json({ students });
+    } catch (error) {
+      console.error("Fetch all students error:", error);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  }
+);
+
+/**
+ * GET /mentors
+ * 
+ * Fetch all alumni mentors
+ * Requires admin role
+ */
+router.get(
+  "/mentors",
+  authenticate,
+  requireAdmin,
+  async (_req: AuthRequest, res: Response): Promise<Response | void> => {
+    try {
+      const mentors = await prisma.user.findMany({
+        where: {
+          role: "alumni",
+        },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          role: true,
+          approvalStatus: true,
+          createdAt: true,
+          graduationYear: true,
+          currentCompany: true,
+          currentPosition: true,
+          mentoringGoals: true,
+          skillsOffered: true,
+          about: true,
+          location: true,
+          linkedInUrl: true,
+          githubUrl: true,
+          portfolioUrl: true,
+          languages: true,
+          interests: true,
+          workExperience: true,
+          projects: true,
+          certifications: true,
+        },
+        orderBy: {
+          createdAt: "desc",
+        },
+      });
+
+      return res.json({ mentors });
+    } catch (error) {
+      console.error("Fetch all mentors error:", error);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  }
+);
+
+/**
  * GET /students/pending
  * 
  * Fetch all pending student approval requests
@@ -197,6 +310,28 @@ router.get(
           role: true,
           approvalStatus: true,
           createdAt: true,
+          studentId: true,
+          contactEmail: true,
+          degree: true,
+          yearOfStudy: true,
+          expectedGraduation: true,
+          academicFocus: true,
+          mentoringGoals: true,
+          skillsWanted: true,
+          cvFileName: true,
+          cvFilePath: true,
+          cvUploadedAt: true,
+          about: true,
+          location: true,
+          linkedInUrl: true,
+          githubUrl: true,
+          portfolioUrl: true,
+          gpa: true,
+          languages: true,
+          interests: true,
+          workExperience: true,
+          projects: true,
+          certifications: true,
         },
         orderBy: {
           createdAt: "asc",
@@ -206,6 +341,63 @@ router.get(
       return res.json({ students });
     } catch (error) {
       console.error("Fetch pending students error:", error);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  }
+);
+
+/**
+ * GET /matches
+ * 
+ * Fetch all matches
+ * Requires admin role
+ */
+router.get(
+  "/matches",
+  authenticate,
+  requireAdmin,
+  async (_req: AuthRequest, res: Response): Promise<Response | void> => {
+    try {
+      const matches = await prisma.match.findMany({
+        include: {
+          student: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              studentId: true,
+              degree: true,
+              yearOfStudy: true,
+              expectedGraduation: true,
+              academicFocus: true,
+            },
+          },
+          alumni: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              graduationYear: true,
+              currentCompany: true,
+              currentPosition: true,
+            },
+          },
+          confirmedBy: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            },
+          },
+        },
+        orderBy: {
+          createdAt: "desc",
+        },
+      });
+
+      return res.json({ matches });
+    } catch (error) {
+      console.error("Fetch all matches error:", error);
       return res.status(500).json({ error: "Internal server error" });
     }
   }
@@ -445,6 +637,74 @@ router.get(
       });
     } catch (error) {
       console.error("Error fetching admin statistics:", error);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  }
+);
+
+/**
+ * GET /admin/students/:id/cv
+ *
+ * Download/view a student's CV file.
+ * Requires admin role.
+ */
+router.get(
+  "/students/:id/cv",
+  authenticate,
+  requireAdmin,
+  async (req: AuthRequest, res: Response): Promise<Response | void> => {
+    try {
+      const studentId = parseInt(req.params.id, 10);
+      if (isNaN(studentId)) {
+        return res.status(400).json({ error: "Invalid student ID" });
+      }
+
+      // 1) Fetch student CV file path
+      const student = await prisma.user.findUnique({
+        where: { id: studentId },
+        select: {
+          id: true,
+          role: true,
+          cvFileName: true,
+          cvFilePath: true,
+        },
+      });
+
+      // 2) Handle student not found
+      if (!student) {
+        return res.status(404).json({ error: "Student not found" });
+      }
+
+      // 3) Verify it's a student
+      if (student.role !== "student") {
+        return res.status(400).json({ error: "User is not a student" });
+      }
+
+      // 4) Check if CV exists
+      if (!student.cvFileName) {
+        return res.status(404).json({ error: "CV not found" });
+      }
+
+      // 5) Check if file path exists
+      if (!student.cvFilePath) {
+        return res.status(404).json({ error: "CV file path not found. The CV may have been uploaded before file storage was implemented. Please ask the student to re-upload their CV." });
+      }
+
+      // 6) Check if file exists on disk
+      const filePath = path.isAbsolute(student.cvFilePath) 
+        ? student.cvFilePath 
+        : path.join(process.cwd(), student.cvFilePath);
+      
+      if (!fs.existsSync(filePath)) {
+        return res.status(404).json({ error: "CV file not found on server. The file may have been deleted or moved." });
+      }
+
+      // 7) Send file
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `inline; filename="${student.cvFileName}"`);
+      return res.sendFile(path.resolve(filePath));
+    } catch (error) {
+      console.error("CV download error:", error);
       return res.status(500).json({ error: "Internal server error" });
     }
   }

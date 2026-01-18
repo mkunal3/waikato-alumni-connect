@@ -37,3 +37,43 @@ export interface MeResponse {
   user: User;
 }
 
+export interface ProfileResponse {
+  user: {
+    id: number;
+    name: string;
+    email: string;
+    role: UserRole;
+    approvalStatus: ApprovalStatus;
+    createdAt: string;
+    studentId?: string;
+    degree?: string;
+    yearOfStudy?: number;
+    graduationYear?: number;
+    currentCompany?: string;
+    currentPosition?: string;
+    mentoringGoals?: string[];
+    skillsOffered?: string[];
+    skillsWanted?: string[];
+    profileComplete?: number;
+  };
+}export interface MatchResponse {
+  match: {
+    id: number;
+    status: string;
+    matchScore?: number;
+    matchReasons?: string[];
+    confirmedAt?: string;
+    student: {
+      id: number;
+      name: string;
+      email: string;
+    };
+    alumni: {
+      id: number;
+      name: string;
+      email: string;
+      currentCompany?: string;
+      currentPosition?: string;
+    };
+  };
+}

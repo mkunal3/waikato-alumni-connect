@@ -659,11 +659,13 @@ router.get(
 
       if (req.role === "student") {
         // Student looking for their alumni mentor
-        // Only show matches that have been accepted by the alumni (status: "accepted")
+        // Show matches that are confirmed or accepted by the alumni
         match = await prisma.match.findFirst({
           where: {
             studentId: req.userId,
-            status: "accepted", // Only show matches that alumni has accepted
+            status: {
+              in: ["confirmed", "accepted"], // Show both confirmed and accepted matches
+            },
           },
           include: {
             student: {

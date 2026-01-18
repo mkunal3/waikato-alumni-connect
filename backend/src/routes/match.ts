@@ -654,11 +654,22 @@ router.get(
         return res.status(401).json({ error: "Unauthorized" });
       }
 
-      // 2) Build query based on user role
-      console.log(`[Match /my] userId: ${req.userId}, role: ${req.role}, email: ${req.email}`);
+      // 2) Get user role - if not in JWT, fetch from database
+      let userRole = req.role;
+      if (!userRole || (userRole !== "student" && userRole !== "alumni")) {
+        const user = await prisma.user.findUnique({
+          where: { id: req.userId },
+          select: { role: true },
+        });
+        if (user) {
+          userRole = user.role;
+        }
+      }
+
+      // 3) Build query based on user role
       let match;
 
-      if (req.role === "student") {
+      if (userRole === "student") {
         // Student looking for their alumni mentor
         // Show matches that are confirmed or accepted by the alumni
         match = await prisma.match.findFirst({
@@ -687,7 +698,7 @@ router.get(
           },
         });
         console.log(`[Student Match Query] userId: ${req.userId}, found match: ${match ? `id=${match.id}, status=${match.status}` : 'null'}`);
-      } else if (req.role === "alumni") {
+      } else if (userRole === "alumni") {
         // Alumni looking for their student mentee
         // Only show matches that have been accepted by the alumni (status: "accepted")
         match = await prisma.match.findFirst({

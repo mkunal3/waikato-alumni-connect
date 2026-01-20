@@ -120,7 +120,9 @@ export function AdminDashboard() {
   
   // Initialize viewMode from URL params or default to 'overview'
   const initialViewMode = (() => {
-    const view = searchParams.get('view') as 'overview' | 'students' | 'studentDetail' | 'alumni' | 'alumniDetail' | 'matches' | 'matchDetail' | null;
+    const view = searchParams.get('view') as 'overview' | 'students' | 'studentDetail' | 'alumni' | 'alumniDetail' | 'matches' | 'matchDetail' | 'pending' | 'pendingDetail' | 'stats' | null;
+    // Map 'stats' to 'overview' for backward compatibility
+    if (view === 'stats') return 'overview';
     return view || 'overview';
   })();
   
@@ -146,7 +148,7 @@ export function AdminDashboard() {
   const [studentSortBy, setStudentSortBy] = useState<'name' | 'createdAt'>('name');
   const [alumniFilter, setAlumniFilter] = useState<'all' | 'matched' | 'awaitingResponse' | 'unmatched'>('all');
   const [alumniSortBy, setAlumniSortBy] = useState<'name' | 'createdAt'>('name');
-  const [viewMode, setViewMode] = useState<'overview' | 'students' | 'studentDetail' | 'alumni' | 'alumniDetail' | 'matches' | 'matchDetail'>(initialViewMode);
+  const [viewMode, setViewMode] = useState<'overview' | 'students' | 'studentDetail' | 'alumni' | 'alumniDetail' | 'matches' | 'matchDetail' | 'pending' | 'pendingDetail'>(initialViewMode);
   const [studentSubFilter, setStudentSubFilter] = useState<'all' | 'approved' | 'pending'>('all');
   const [alumniSubFilter, setAlumniSubFilter] = useState<'all' | 'matched' | 'unmatched' | 'awaitingResponse'>('all');
   const [matchSubFilter, setMatchSubFilter] = useState<'all' | 'active' | 'completed' | 'pending' | 'awaitingAlumni'>('all');
@@ -553,9 +555,9 @@ export function AdminDashboard() {
         
         // If in pendingDetail view and student is approved, go back to pending list
         if (viewMode === 'pendingDetail' && role === 'student') {
-          // If no more pending students, go back to stats
+          // If no more pending students, go back to overview
           if (!studentsResponse.value.students || studentsResponse.value.students.length === 0) {
-            setViewMode('stats');
+            setViewMode('overview');
             setSelectedStudent(null);
           } else {
             // Go back to pending list
@@ -656,11 +658,11 @@ export function AdminDashboard() {
       if (studentsResponse.status === 'fulfilled') {
         setPendingStudents(studentsResponse.value.students || []);
         
-        // If in pendingDetail view and student is approved, go back to pending list
+        // If in pendingDetail view and student is rejected, go back to pending list
         if (viewMode === 'pendingDetail' && role === 'student') {
-          // If no more pending students, go back to stats
+          // If no more pending students, go back to overview
           if (!studentsResponse.value.students || studentsResponse.value.students.length === 0) {
-            setViewMode('stats');
+            setViewMode('overview');
             setSelectedStudent(null);
           } else {
             // Go back to pending list

@@ -253,6 +253,9 @@ export function AdminDashboard() {
           setActiveMatchesCount(activeCount);
           setAwaitingAlumniCount(awaitingCount);
         } else {
+          // Only log the error, don't set a global error for matches loading
+          // since it's not critical for the dashboard overview
+          console.warn('Failed to load matches:', matchesResponse.reason);
           setAllMatches([]);
           setPendingMatchesCount(0);
           setActiveMatchesCount(0);
@@ -410,7 +413,9 @@ export function AdminDashboard() {
       setViewMode('matches');
     } catch (err) {
       console.error('Failed to load all matches:', err);
-      setError('Failed to load matches list');
+      const errorMessage = err instanceof Error ? err.message : 'Failed to load matches list';
+      setError(errorMessage);
+      // Don't navigate to matches view if loading failed - stay in current view
     } finally {
       setLoading(false);
     }

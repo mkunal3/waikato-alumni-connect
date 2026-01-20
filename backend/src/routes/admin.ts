@@ -287,6 +287,59 @@ router.get(
 );
 
 /**
+ * GET /mentors/pending
+ * 
+ * Fetch all pending alumni mentor approval requests
+ * Requires admin role
+ */
+router.get(
+  "/mentors/pending",
+  authenticate,
+  requireAdmin,
+  async (_req: AuthRequest, res: Response): Promise<Response | void> => {
+    try {
+      const mentors = await prisma.user.findMany({
+        where: {
+          role: "alumni",
+          approvalStatus: "pending",
+        },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          role: true,
+          approvalStatus: true,
+          createdAt: true,
+          graduationYear: true,
+          currentCompany: true,
+          currentPosition: true,
+          mentoringGoals: true,
+          skillsOffered: true,
+          about: true,
+          location: true,
+          linkedInUrl: true,
+          githubUrl: true,
+          portfolioUrl: true,
+          languages: true,
+          interests: true,
+          workExperience: true,
+          projects: true,
+          certifications: true,
+        },
+        orderBy: {
+          createdAt: "asc",
+        },
+      });
+
+      return res.json({ mentors });
+    } catch (error) {
+      console.error("Fetch pending mentors error:", error);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  }
+);
+
+/**
  * GET /students/pending
  * 
  * Fetch all pending student approval requests
@@ -398,7 +451,15 @@ router.get(
       return res.json({ matches });
     } catch (error) {
       console.error("Fetch all matches error:", error);
-      return res.status(500).json({ error: "Internal server error" });
+      // Log more detailed error information
+      if (error instanceof Error) {
+        console.error("Error message:", error.message);
+        console.error("Error stack:", error.stack);
+      }
+      return res.status(500).json({ 
+        error: "Internal server error",
+        details: error instanceof Error ? error.message : "Unknown error"
+      });
     }
   }
 );

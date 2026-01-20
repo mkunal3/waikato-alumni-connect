@@ -259,9 +259,8 @@ export function AdminDashboard() {
           setActiveMatchesCount(activeCount);
           setAwaitingAlumniCount(awaitingCount);
         } else {
-          // Only log the error, don't set a global error for matches loading
-          // since it's not critical for the dashboard overview
-          console.warn('Failed to load matches:', matchesResponse.reason);
+          // Silently handle matches loading errors since it's not critical for dashboard overview
+          // Error is already logged by apiRequest, no need to log again here
           setAllMatches([]);
           setPendingMatchesCount(0);
           setActiveMatchesCount(0);

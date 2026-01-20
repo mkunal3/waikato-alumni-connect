@@ -448,7 +448,13 @@ router.get(
         },
       });
 
-      return res.json({ matches });
+      // Transform the data to ensure confirmedBy is properly serialized
+      const formattedMatches = matches.map(match => ({
+        ...match,
+        confirmedBy: match.confirmedBy || null,
+      }));
+
+      return res.json({ matches: formattedMatches });
     } catch (error) {
       console.error("Fetch all matches error:", error);
       // Log more detailed error information

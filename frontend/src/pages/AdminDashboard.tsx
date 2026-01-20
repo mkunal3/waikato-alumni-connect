@@ -259,8 +259,15 @@ export function AdminDashboard() {
           setActiveMatchesCount(activeCount);
           setAwaitingAlumniCount(awaitingCount);
         } else {
-          // Silently handle matches loading errors since it's not critical for dashboard overview
-          // Error is already logged by apiRequest, no need to log again here
+          // Handle matches loading errors - log for debugging but don't show error banner
+          const error = matchesResponse.reason;
+          if (error instanceof Error) {
+            // Only log non-critical errors (like 500) without showing error banner
+            // Authentication errors are handled by apiRequest
+            if (!error.message.includes('expired') && !error.message.includes('Unauthorized')) {
+              console.warn('Failed to load matches (non-critical):', error.message);
+            }
+          }
           setAllMatches([]);
           setPendingMatchesCount(0);
           setActiveMatchesCount(0);

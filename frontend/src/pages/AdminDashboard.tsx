@@ -218,7 +218,13 @@ export function AdminDashboard() {
             // Token expired, will be handled by apiRequest
             return;
           }
-          console.warn('Failed to load statistics');
+          // If statistics API fails, it's critical - show the error
+          const errorMessage = error instanceof Error ? error.message : 'Failed to load dashboard statistics';
+          console.error('Failed to load statistics:', error);
+          setError(errorMessage);
+          // Don't continue loading if critical statistics are missing
+          setLoading(false);
+          return;
         }
 
         if (studentsResponse.status === 'fulfilled') {

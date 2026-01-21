@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, ReactNode, PropsWithChildren } from 'react';
+import { createContext, useContext, useState, useEffect, PropsWithChildren } from 'react';
 
 export type Language = 'en' | 'mi';
 
@@ -11,7 +11,14 @@ interface LanguageContextType {
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
 export function LanguageProvider({ children }: PropsWithChildren) {
-  const [language, setLanguage] = useState<Language>('en');
+  const [language, setLanguage] = useState<Language>(() => {
+  const savedLang = localStorage.getItem('lang');
+  return savedLang === 'mi' || savedLang === 'en' ? savedLang : 'en';
+  });
+
+  useEffect(() => {
+  localStorage.setItem('lang', language);
+}, [language]);
 
   // Translation helper - returns text based on current language
   const t = (en: string, mi: string): string => {

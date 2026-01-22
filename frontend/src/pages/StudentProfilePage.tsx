@@ -30,6 +30,7 @@ const DEGREE_OPTIONS = [
   'Bachelor of Teaching',
   'Bachelor of Music',
   'Bachelor of Health, Sport and Human Performance',
+  'Master of Information Technology',
   'Master of Science',
   'Master of Computing and Mathematical Sciences',
   'Master of Engineering',

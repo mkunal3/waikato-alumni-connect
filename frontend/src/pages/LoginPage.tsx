@@ -97,7 +97,7 @@ export function LoginPage() {
                   id="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="your.email@waikato.ac.nz"
+                  placeholder="Enter your email address"
                   style={{ width: '100%', padding: '0.75rem 1rem', border: '1px solid #d1d5db', borderRadius: '8px', fontSize: '1rem' }}
                   required
                   disabled={isLoading}

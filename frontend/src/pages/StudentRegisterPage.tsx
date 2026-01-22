@@ -13,19 +13,57 @@ export function StudentRegisterPage() {
     studentId: '',
     emailPrefix: '',
     password: '',
-    confirmPassword: ''
+    confirmPassword: '',
+    verificationCode: ''
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [showPasswordRequirements, setShowPasswordRequirements] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isSendingCode, setIsSendingCode] = useState(false);
+  const [codeSent, setCodeSent] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setFormData({
       ...formData,
       [e.target.name]: e.target.value
     });
+  };
+
+  const handleSendCode = async () => {
+    if (!formData.emailPrefix.trim()) {
+      setError('Please enter your email prefix first');
+      return;
+    }
+
+    // Validate email prefix format
+    const emailPrefixRegex = /^[a-zA-Z0-9._-]+$/;
+    if (!emailPrefixRegex.test(formData.emailPrefix.trim())) {
+      setError('Email prefix can only contain letters, numbers, dots, underscores, and hyphens');
+      return;
+    }
+
+    const fullEmail = `${formData.emailPrefix.trim()}@students.waikato.ac.nz`;
+    setIsSendingCode(true);
+    setError(null);
+
+    try {
+      await apiRequest(API_ENDPOINTS.sendVerificationCode, {
+        method: 'POST',
+        body: JSON.stringify({ email: fullEmail }),
+      });
+      setCodeSent(true);
+    } catch (err) {
+      console.error('Send code error:', err);
+      let errorMessage = 'Failed to send verification code. Please try again.';
+      if (err instanceof Error) {
+        errorMessage = err.message;
+      }
+      setError(errorMessage);
+    } finally {
+      setIsSendingCode(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -57,6 +95,12 @@ export function StudentRegisterPage() {
 
     // Combine prefix with domain
     const fullEmail = `${formData.emailPrefix.trim()}@students.waikato.ac.nz`;
+
+    // Validate verification code
+    if (!formData.verificationCode.trim()) {
+      setError('Please enter the verification code sent to your email');
+      return;
+    }
 
     if (formData.password !== formData.confirmPassword) {
       setError('Passwords do not match');
@@ -102,7 +146,8 @@ export function StudentRegisterPage() {
             email: fullEmail,
             studentId: formData.studentId.trim(),
             password: formData.password,
-            role: 'student'
+            role: 'student',
+            verificationCode: formData.verificationCode.trim()
           }),
         }
       );
@@ -239,6 +284,52 @@ export function StudentRegisterPage() {
                     Your email: <strong>{formData.emailPrefix.trim()}@students.waikato.ac.nz</strong>
                   </p>
                 )}
+                <button
+                  type="button"
+                  onClick={handleSendCode}
+                  disabled={isSendingCode || !formData.emailPrefix.trim() || isLoading}
+                  style={{
+                    marginTop: '8px',
+                    padding: '8px 16px',
+                    backgroundColor: codeSent ? '#10B981' : '#D50000',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '6px',
+                    cursor: (isSendingCode || !formData.emailPrefix.trim() || isLoading) ? 'not-allowed' : 'pointer',
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    opacity: (isSendingCode || !formData.emailPrefix.trim() || isLoading) ? 0.5 : 1
+                  }}
+                >
+                  {isSendingCode ? 'Sending...' : codeSent ? 'Code Sent ✓' : 'Send Verification Code'}
+                </button>
+                {codeSent && (
+                  <p style={{ marginTop: '6px', fontSize: '12px', color: '#10B981' }}>
+                    Verification code sent! Please check your email.
+                  </p>
+                )}
+              </div>
+
+              {/* Verification Code */}
+              <div>
+                <label htmlFor="verificationCode" style={{ display: 'block', color: '#4B5563', marginBottom: '8px', fontWeight: '500' }}>
+                  Verification Code *
+                </label>
+                <input
+                  type="text"
+                  id="verificationCode"
+                  name="verificationCode"
+                  value={formData.verificationCode}
+                  onChange={handleChange}
+                  placeholder="Enter the 6-digit code from your email"
+                  style={{ width: '100%', padding: '12px 16px', border: '1px solid #D1D5DB', borderRadius: '8px', outline: 'none' }}
+                  required
+                  disabled={isLoading}
+                  maxLength={6}
+                />
+                <p style={{ marginTop: '6px', fontSize: '12px', color: '#6B7280' }}>
+                  Enter the 6-digit verification code sent to your student email
+                </p>
               </div>
 
               {/* Password */}

@@ -87,7 +87,7 @@ type UserRole = "student" | "alumni";
  * POST /auth/register
  * 
  * Registration flow:
- * 1. Students: name, studentId, email, password - no verification code required
+ * 1. Students: name, studentId, email, password, verificationCode - verification code required
  * 2. Alumni: name, email, password, invitation code - no verification code required
  * 3. Students are pending approval (can login but cannot browse mentors until approved)
  * 4. Alumni are auto-approved
@@ -103,6 +103,7 @@ router.post(
         invitationCode,
         name,
         studentId,
+        verificationCode,
       } = req.body as {
         email?: string;
         password?: string;
@@ -110,6 +111,7 @@ router.post(
         invitationCode?: string;
         name?: string;
         studentId?: string;
+        verificationCode?: string;
       };
 
       // 1. Validate required fields
@@ -203,7 +205,7 @@ router.post(
         }
       }
 
-      // 7. Handle alumni-specific validation
+      // 8. Handle alumni-specific validation
       let approvalStatus = "pending";
 
       if (role === "alumni") {
@@ -231,13 +233,13 @@ router.post(
         approvalStatus = "pending";
       }
 
-      // 8. Hash password
+      // 9. Hash password
       const passwordHash = await bcrypt.hash(password, 10);
 
-      // 9. Determine user name (fallback to email prefix if not provided)
+      // 10. Determine user name (fallback to email prefix if not provided)
       const displayName = name || normalisedEmail.split("@")[0];
 
-      // 10. Create user
+      // 11. Create user
       const newUser = await prisma.user.create({
         data: {
           name: displayName,

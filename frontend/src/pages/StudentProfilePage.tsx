@@ -2512,11 +2512,30 @@ export function StudentProfilePage() {
                     </label>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
                       <select
-                        value={project.startDate ? project.startDate.split(' ')[0] || '' : ''}
+                        value={(() => {
+                          if (!project.startDate) return '';
+                          const parts = project.startDate.split(' ');
+                          // If first part is a month name, return it
+                          if (parts.length > 0 && DATE_MONTHS.includes(parts[0])) {
+                            return parts[0];
+                          }
+                          return '';
+                        })()}
                         onChange={(e) => {
                           const month = e.target.value;
-                          const year = project.startDate ? project.startDate.split(' ')[1] : '';
-                          handleUpdateProject(project.id, 'startDate', month && year ? `${month} ${year}` : '');
+                          // Parse existing startDate - could be "Month Year", "Month", "Year", or empty
+                          const parts = project.startDate ? project.startDate.split(' ') : [];
+                          const year = parts.length === 2 ? parts[1] : (parts.length === 1 && /^\d{4}$/.test(parts[0]) ? parts[0] : '');
+                          // Save even if only one part is selected
+                          if (month && year) {
+                            handleUpdateProject(project.id, 'startDate', `${month} ${year}`);
+                          } else if (month) {
+                            handleUpdateProject(project.id, 'startDate', month);
+                          } else if (year) {
+                            handleUpdateProject(project.id, 'startDate', year);
+                          } else {
+                            handleUpdateProject(project.id, 'startDate', '');
+                          }
                         }}
                         style={{
                           width: '100%',
@@ -2537,11 +2556,34 @@ export function StudentProfilePage() {
                         ))}
                       </select>
                       <select
-                        value={project.startDate ? project.startDate.split(' ')[1] || '' : ''}
+                        value={(() => {
+                          if (!project.startDate) return '';
+                          const parts = project.startDate.split(' ');
+                          // If it's "Month Year", return year
+                          if (parts.length === 2 && DATE_MONTHS.includes(parts[0])) {
+                            return parts[1];
+                          }
+                          // If it's just a year (numeric), return it
+                          if (parts.length === 1 && /^\d{4}$/.test(parts[0])) {
+                            return parts[0];
+                          }
+                          return '';
+                        })()}
                         onChange={(e) => {
                           const year = e.target.value;
-                          const month = project.startDate ? project.startDate.split(' ')[0] : '';
-                          handleUpdateProject(project.id, 'startDate', month && year ? `${month} ${year}` : '');
+                          // Parse existing startDate - could be "Month Year", "Month", "Year", or empty
+                          const parts = project.startDate ? project.startDate.split(' ') : [];
+                          const month = parts.length > 0 && DATE_MONTHS.includes(parts[0]) ? parts[0] : '';
+                          // Save even if only one part is selected
+                          if (month && year) {
+                            handleUpdateProject(project.id, 'startDate', `${month} ${year}`);
+                          } else if (month) {
+                            handleUpdateProject(project.id, 'startDate', month);
+                          } else if (year) {
+                            handleUpdateProject(project.id, 'startDate', year);
+                          } else {
+                            handleUpdateProject(project.id, 'startDate', '');
+                          }
                         }}
                         style={{
                           width: '100%',
@@ -2570,11 +2612,30 @@ export function StudentProfilePage() {
                     </label>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
                       <select
-                        value={project.endDate ? project.endDate.split(' ')[0] || '' : ''}
+                        value={(() => {
+                          if (!project.endDate) return '';
+                          const parts = project.endDate.split(' ');
+                          // If first part is a month name, return it
+                          if (parts.length > 0 && DATE_MONTHS.includes(parts[0])) {
+                            return parts[0];
+                          }
+                          return '';
+                        })()}
                         onChange={(e) => {
                           const month = e.target.value;
-                          const year = project.endDate ? project.endDate.split(' ')[1] : '';
-                          handleUpdateProject(project.id, 'endDate', month && year ? `${month} ${year}` : '');
+                          // Parse existing endDate - could be "Month Year", "Month", "Year", or empty
+                          const parts = project.endDate ? project.endDate.split(' ') : [];
+                          const year = parts.length === 2 ? parts[1] : (parts.length === 1 && /^\d{4}$/.test(parts[0]) ? parts[0] : '');
+                          // Save even if only one part is selected
+                          if (month && year) {
+                            handleUpdateProject(project.id, 'endDate', `${month} ${year}`);
+                          } else if (month) {
+                            handleUpdateProject(project.id, 'endDate', month);
+                          } else if (year) {
+                            handleUpdateProject(project.id, 'endDate', year);
+                          } else {
+                            handleUpdateProject(project.id, 'endDate', '');
+                          }
                         }}
                         style={{
                           width: '100%',
@@ -2595,11 +2656,34 @@ export function StudentProfilePage() {
                         ))}
                       </select>
                       <select
-                        value={project.endDate ? project.endDate.split(' ')[1] || '' : ''}
+                        value={(() => {
+                          if (!project.endDate) return '';
+                          const parts = project.endDate.split(' ');
+                          // If it's "Month Year", return year
+                          if (parts.length === 2 && DATE_MONTHS.includes(parts[0])) {
+                            return parts[1];
+                          }
+                          // If it's just a year (numeric), return it
+                          if (parts.length === 1 && /^\d{4}$/.test(parts[0])) {
+                            return parts[0];
+                          }
+                          return '';
+                        })()}
                         onChange={(e) => {
                           const year = e.target.value;
-                          const month = project.endDate ? project.endDate.split(' ')[0] : '';
-                          handleUpdateProject(project.id, 'endDate', month && year ? `${month} ${year}` : '');
+                          // Parse existing endDate - could be "Month Year", "Month", "Year", or empty
+                          const parts = project.endDate ? project.endDate.split(' ') : [];
+                          const month = parts.length > 0 && DATE_MONTHS.includes(parts[0]) ? parts[0] : '';
+                          // Save even if only one part is selected
+                          if (month && year) {
+                            handleUpdateProject(project.id, 'endDate', `${month} ${year}`);
+                          } else if (month) {
+                            handleUpdateProject(project.id, 'endDate', month);
+                          } else if (year) {
+                            handleUpdateProject(project.id, 'endDate', year);
+                          } else {
+                            handleUpdateProject(project.id, 'endDate', '');
+                          }
                         }}
                         style={{
                           width: '100%',
@@ -2842,11 +2926,30 @@ export function StudentProfilePage() {
                     </label>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
                       <select
-                        value={cert.issueDate ? cert.issueDate.split(' ')[0] || '' : ''}
+                        value={(() => {
+                          if (!cert.issueDate) return '';
+                          const parts = cert.issueDate.split(' ');
+                          // If first part is a month name, return it
+                          if (parts.length > 0 && DATE_MONTHS.includes(parts[0])) {
+                            return parts[0];
+                          }
+                          return '';
+                        })()}
                         onChange={(e) => {
                           const month = e.target.value;
-                          const year = cert.issueDate ? cert.issueDate.split(' ')[1] : '';
-                          handleUpdateCertification(cert.id, 'issueDate', month && year ? `${month} ${year}` : '');
+                          // Parse existing issueDate - could be "Month Year", "Month", "Year", or empty
+                          const parts = cert.issueDate ? cert.issueDate.split(' ') : [];
+                          const year = parts.length === 2 ? parts[1] : (parts.length === 1 && /^\d{4}$/.test(parts[0]) ? parts[0] : '');
+                          // Save even if only one part is selected
+                          if (month && year) {
+                            handleUpdateCertification(cert.id, 'issueDate', `${month} ${year}`);
+                          } else if (month) {
+                            handleUpdateCertification(cert.id, 'issueDate', month);
+                          } else if (year) {
+                            handleUpdateCertification(cert.id, 'issueDate', year);
+                          } else {
+                            handleUpdateCertification(cert.id, 'issueDate', '');
+                          }
                         }}
                         style={{
                           width: '100%',
@@ -2867,11 +2970,34 @@ export function StudentProfilePage() {
                         ))}
                       </select>
                       <select
-                        value={cert.issueDate ? cert.issueDate.split(' ')[1] || '' : ''}
+                        value={(() => {
+                          if (!cert.issueDate) return '';
+                          const parts = cert.issueDate.split(' ');
+                          // If it's "Month Year", return year
+                          if (parts.length === 2 && DATE_MONTHS.includes(parts[0])) {
+                            return parts[1];
+                          }
+                          // If it's just a year (numeric), return it
+                          if (parts.length === 1 && /^\d{4}$/.test(parts[0])) {
+                            return parts[0];
+                          }
+                          return '';
+                        })()}
                         onChange={(e) => {
                           const year = e.target.value;
-                          const month = cert.issueDate ? cert.issueDate.split(' ')[0] : '';
-                          handleUpdateCertification(cert.id, 'issueDate', month && year ? `${month} ${year}` : '');
+                          // Parse existing issueDate - could be "Month Year", "Month", "Year", or empty
+                          const parts = cert.issueDate ? cert.issueDate.split(' ') : [];
+                          const month = parts.length > 0 && DATE_MONTHS.includes(parts[0]) ? parts[0] : '';
+                          // Save even if only one part is selected
+                          if (month && year) {
+                            handleUpdateCertification(cert.id, 'issueDate', `${month} ${year}`);
+                          } else if (month) {
+                            handleUpdateCertification(cert.id, 'issueDate', month);
+                          } else if (year) {
+                            handleUpdateCertification(cert.id, 'issueDate', year);
+                          } else {
+                            handleUpdateCertification(cert.id, 'issueDate', '');
+                          }
                         }}
                         style={{
                           width: '100%',
@@ -2900,11 +3026,30 @@ export function StudentProfilePage() {
                     </label>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
                       <select
-                        value={cert.expiryDate ? cert.expiryDate.split(' ')[0] || '' : ''}
+                        value={(() => {
+                          if (!cert.expiryDate) return '';
+                          const parts = cert.expiryDate.split(' ');
+                          // If first part is a month name, return it
+                          if (parts.length > 0 && DATE_MONTHS.includes(parts[0])) {
+                            return parts[0];
+                          }
+                          return '';
+                        })()}
                         onChange={(e) => {
                           const month = e.target.value;
-                          const year = cert.expiryDate ? cert.expiryDate.split(' ')[1] : '';
-                          handleUpdateCertification(cert.id, 'expiryDate', month && year ? `${month} ${year}` : '');
+                          // Parse existing expiryDate - could be "Month Year", "Month", "Year", or empty
+                          const parts = cert.expiryDate ? cert.expiryDate.split(' ') : [];
+                          const year = parts.length === 2 ? parts[1] : (parts.length === 1 && /^\d{4}$/.test(parts[0]) ? parts[0] : '');
+                          // Save even if only one part is selected
+                          if (month && year) {
+                            handleUpdateCertification(cert.id, 'expiryDate', `${month} ${year}`);
+                          } else if (month) {
+                            handleUpdateCertification(cert.id, 'expiryDate', month);
+                          } else if (year) {
+                            handleUpdateCertification(cert.id, 'expiryDate', year);
+                          } else {
+                            handleUpdateCertification(cert.id, 'expiryDate', '');
+                          }
                         }}
                         style={{
                           width: '100%',
@@ -2925,11 +3070,34 @@ export function StudentProfilePage() {
                         ))}
                       </select>
                       <select
-                        value={cert.expiryDate ? cert.expiryDate.split(' ')[1] || '' : ''}
+                        value={(() => {
+                          if (!cert.expiryDate) return '';
+                          const parts = cert.expiryDate.split(' ');
+                          // If it's "Month Year", return year
+                          if (parts.length === 2 && DATE_MONTHS.includes(parts[0])) {
+                            return parts[1];
+                          }
+                          // If it's just a year (numeric), return it
+                          if (parts.length === 1 && /^\d{4}$/.test(parts[0])) {
+                            return parts[0];
+                          }
+                          return '';
+                        })()}
                         onChange={(e) => {
                           const year = e.target.value;
-                          const month = cert.expiryDate ? cert.expiryDate.split(' ')[0] : '';
-                          handleUpdateCertification(cert.id, 'expiryDate', month && year ? `${month} ${year}` : '');
+                          // Parse existing expiryDate - could be "Month Year", "Month", "Year", or empty
+                          const parts = cert.expiryDate ? cert.expiryDate.split(' ') : [];
+                          const month = parts.length > 0 && DATE_MONTHS.includes(parts[0]) ? parts[0] : '';
+                          // Save even if only one part is selected
+                          if (month && year) {
+                            handleUpdateCertification(cert.id, 'expiryDate', `${month} ${year}`);
+                          } else if (month) {
+                            handleUpdateCertification(cert.id, 'expiryDate', month);
+                          } else if (year) {
+                            handleUpdateCertification(cert.id, 'expiryDate', year);
+                          } else {
+                            handleUpdateCertification(cert.id, 'expiryDate', '');
+                          }
                         }}
                         style={{
                           width: '100%',

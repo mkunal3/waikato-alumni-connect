@@ -2026,11 +2026,30 @@ export function StudentProfilePage() {
                     </label>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
                       <select
-                        value={exp.startDate ? exp.startDate.split(' ')[0] || '' : ''}
+                        value={(() => {
+                          if (!exp.startDate) return '';
+                          const parts = exp.startDate.split(' ');
+                          // If first part is a month name, return it
+                          if (parts.length > 0 && DATE_MONTHS.includes(parts[0])) {
+                            return parts[0];
+                          }
+                          return '';
+                        })()}
                         onChange={(e) => {
                           const month = e.target.value;
-                          const year = exp.startDate ? exp.startDate.split(' ')[1] : '';
-                          handleUpdateWorkExperience(exp.id, 'startDate', month && year ? `${month} ${year}` : '');
+                          // Parse existing startDate - could be "Month Year", "Month", "Year", or empty
+                          const parts = exp.startDate ? exp.startDate.split(' ') : [];
+                          const year = parts.length === 2 ? parts[1] : (parts.length === 1 && /^\d{4}$/.test(parts[0]) ? parts[0] : '');
+                          // Save even if only one part is selected
+                          if (month && year) {
+                            handleUpdateWorkExperience(exp.id, 'startDate', `${month} ${year}`);
+                          } else if (month) {
+                            handleUpdateWorkExperience(exp.id, 'startDate', month);
+                          } else if (year) {
+                            handleUpdateWorkExperience(exp.id, 'startDate', year);
+                          } else {
+                            handleUpdateWorkExperience(exp.id, 'startDate', '');
+                          }
                         }}
                         style={{
                           width: '100%',
@@ -2051,11 +2070,34 @@ export function StudentProfilePage() {
                         ))}
                       </select>
                       <select
-                        value={exp.startDate ? exp.startDate.split(' ')[1] || '' : ''}
+                        value={(() => {
+                          if (!exp.startDate) return '';
+                          const parts = exp.startDate.split(' ');
+                          // If it's "Month Year", return year
+                          if (parts.length === 2 && DATE_MONTHS.includes(parts[0])) {
+                            return parts[1];
+                          }
+                          // If it's just a year (numeric), return it
+                          if (parts.length === 1 && /^\d{4}$/.test(parts[0])) {
+                            return parts[0];
+                          }
+                          return '';
+                        })()}
                         onChange={(e) => {
                           const year = e.target.value;
-                          const month = exp.startDate ? exp.startDate.split(' ')[0] : '';
-                          handleUpdateWorkExperience(exp.id, 'startDate', month && year ? `${month} ${year}` : '');
+                          // Parse existing startDate - could be "Month Year", "Month", "Year", or empty
+                          const parts = exp.startDate ? exp.startDate.split(' ') : [];
+                          const month = parts.length > 0 && DATE_MONTHS.includes(parts[0]) ? parts[0] : '';
+                          // Save even if only one part is selected
+                          if (month && year) {
+                            handleUpdateWorkExperience(exp.id, 'startDate', `${month} ${year}`);
+                          } else if (month) {
+                            handleUpdateWorkExperience(exp.id, 'startDate', month);
+                          } else if (year) {
+                            handleUpdateWorkExperience(exp.id, 'startDate', year);
+                          } else {
+                            handleUpdateWorkExperience(exp.id, 'startDate', '');
+                          }
                         }}
                         style={{
                           width: '100%',
@@ -2085,11 +2127,30 @@ export function StudentProfilePage() {
                       </label>
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
                         <select
-                          value={exp.endDate ? exp.endDate.split(' ')[0] || '' : ''}
+                          value={(() => {
+                            if (!exp.endDate) return '';
+                            const parts = exp.endDate.split(' ');
+                            // If first part is a month name, return it
+                            if (parts.length > 0 && DATE_MONTHS.includes(parts[0])) {
+                              return parts[0];
+                            }
+                            return '';
+                          })()}
                           onChange={(e) => {
                             const month = e.target.value;
-                            const year = exp.endDate ? exp.endDate.split(' ')[1] : '';
-                            handleUpdateWorkExperience(exp.id, 'endDate', month && year ? `${month} ${year}` : '');
+                            // Parse existing endDate - could be "Month Year", "Month", "Year", or empty
+                            const parts = exp.endDate ? exp.endDate.split(' ') : [];
+                            const year = parts.length === 2 ? parts[1] : (parts.length === 1 && /^\d{4}$/.test(parts[0]) ? parts[0] : '');
+                            // Save even if only one part is selected
+                            if (month && year) {
+                              handleUpdateWorkExperience(exp.id, 'endDate', `${month} ${year}`);
+                            } else if (month) {
+                              handleUpdateWorkExperience(exp.id, 'endDate', month);
+                            } else if (year) {
+                              handleUpdateWorkExperience(exp.id, 'endDate', year);
+                            } else {
+                              handleUpdateWorkExperience(exp.id, 'endDate', '');
+                            }
                           }}
                           style={{
                             width: '100%',
@@ -2110,11 +2171,34 @@ export function StudentProfilePage() {
                           ))}
                         </select>
                         <select
-                          value={exp.endDate ? exp.endDate.split(' ')[1] || '' : ''}
+                          value={(() => {
+                            if (!exp.endDate) return '';
+                            const parts = exp.endDate.split(' ');
+                            // If it's "Month Year", return year
+                            if (parts.length === 2 && DATE_MONTHS.includes(parts[0])) {
+                              return parts[1];
+                            }
+                            // If it's just a year (numeric), return it
+                            if (parts.length === 1 && /^\d{4}$/.test(parts[0])) {
+                              return parts[0];
+                            }
+                            return '';
+                          })()}
                           onChange={(e) => {
                             const year = e.target.value;
-                            const month = exp.endDate ? exp.endDate.split(' ')[0] : '';
-                            handleUpdateWorkExperience(exp.id, 'endDate', month && year ? `${month} ${year}` : '');
+                            // Parse existing endDate - could be "Month Year", "Month", "Year", or empty
+                            const parts = exp.endDate ? exp.endDate.split(' ') : [];
+                            const month = parts.length > 0 && DATE_MONTHS.includes(parts[0]) ? parts[0] : '';
+                            // Save even if only one part is selected
+                            if (month && year) {
+                              handleUpdateWorkExperience(exp.id, 'endDate', `${month} ${year}`);
+                            } else if (month) {
+                              handleUpdateWorkExperience(exp.id, 'endDate', month);
+                            } else if (year) {
+                              handleUpdateWorkExperience(exp.id, 'endDate', year);
+                            } else {
+                              handleUpdateWorkExperience(exp.id, 'endDate', '');
+                            }
                           }}
                           style={{
                             width: '100%',

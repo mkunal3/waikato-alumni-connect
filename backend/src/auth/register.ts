@@ -182,7 +182,43 @@ router.post(
         });
       }
 
-      // 6. Check if user already exists
+      // 6. For students, validate verification code
+      if (role === "student") {
+        if (!verificationCode) {
+          return res.status(400).json({
+            error: "Verification code is required for student registration",
+          });
+        }
+
+        // Find the latest unused verification code for this email
+        const verification = await prisma.emailVerification.findFirst({
+          where: {
+            email: normalisedEmail,
+            code: verificationCode.trim(),
+            usedAt: null,
+            expiresAt: {
+              gt: new Date(), // Not expired
+            },
+          },
+          orderBy: {
+            createdAt: "desc",
+          },
+        });
+
+        if (!verification) {
+          return res.status(400).json({
+            error: "Invalid or expired verification code",
+          });
+        }
+
+        // Mark verification code as used
+        await prisma.emailVerification.update({
+          where: { id: verification.id },
+          data: { usedAt: new Date() },
+        });
+      }
+
+      // 7. Check if user already exists
       const existingUser = await prisma.user.findUnique({
         where: { email: normalisedEmail },
       });
@@ -191,7 +227,7 @@ router.post(
         return res.status(400).json({ error: "User already exists" });
       }
 
-      // 6.1. For students, check if studentId already exists
+      // 7.1. For students, check if studentId already exists
       if (role === "student" && studentId) {
         const existingStudentId = await prisma.user.findFirst({
           where: {

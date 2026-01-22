@@ -114,6 +114,7 @@ export function StudentRegisterPage() {
 
     // Password validation
     const hasUppercase = /[A-Z]/.test(formData.password);
+    const hasNumber = /[0-9]/.test(formData.password);
     const hasSpecialChar = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(formData.password);
     const hasInvalidChar = /[\s<>]/.test(formData.password); // No spaces, <, or >
 
@@ -121,7 +122,11 @@ export function StudentRegisterPage() {
       setError('Password must include at least one uppercase letter');
       return;
     }
-
+    
+    if (!hasNumber) {
+      setError('Password must include at least one number');
+      return;
+    }
     if (!hasSpecialChar) {
       setError('Password must include at least one special character');
       return;

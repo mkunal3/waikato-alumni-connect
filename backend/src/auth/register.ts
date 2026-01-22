@@ -162,6 +162,7 @@ router.post(
 
       const hasUppercase = /[A-Z]/.test(password);
       const hasSpecialChar = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password);
+      const hasNumber = /[0-9]/.test(password);
       const hasInvalidChar = /[\s<>]/.test(password);
 
       if (!hasUppercase) {
@@ -173,6 +174,12 @@ router.post(
       if (!hasSpecialChar) {
         return res.status(400).json({
           error: "Password must include at least one special character",
+        });
+      }
+
+      if (!hasNumber) {
+        return res.status(400).json({
+          error: "Password must include at least one number",
         });
       }
 

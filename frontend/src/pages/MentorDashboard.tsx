@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { apiRequest, API_BASE_URL } from '../config/api';
@@ -28,6 +28,7 @@ export function MentorDashboard() {
   const [expandedCertification, setExpandedCertification] = useState<number | null>(null);
   const [coverLetterExpanded, setCoverLetterExpanded] = useState<boolean>(false);
   const [profileExpanded, setProfileExpanded] = useState<boolean>(false);
+  const myMenteesSectionRef = React.useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -108,6 +109,14 @@ export function MentorDashboard() {
   const handleBackToMenteesList = () => {
     setViewMode('list');
     setSelectedMentee(null);
+  };
+
+  const scrollToMyMentees = () => {
+    if (myMenteesSectionRef.current) {
+      myMenteesSectionRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      // Small offset to account for sticky header
+      window.scrollBy(0, -80);
+    }
   };
 
   const handleAcceptRequest = async (requestId: number) => {
@@ -250,29 +259,35 @@ export function MentorDashboard() {
               {/* Main Content */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
                 {/* Quick Stats */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem' }}>
-                  <div style={{ backgroundColor: 'white', borderRadius: '0.75rem', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', border: '1px solid #e5e7eb', padding: '1.25rem' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '1rem' }}>
+                  <div 
+                    onClick={scrollToMyMentees}
+                    style={{ 
+                      backgroundColor: 'white', 
+                      borderRadius: '0.75rem', 
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.1)', 
+                      border: '1px solid #e5e7eb', 
+                      padding: '1.25rem',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.borderColor = '#C8102E';
+                      e.currentTarget.style.boxShadow = '0 4px 6px rgba(0,0,0,0.1)';
+                      e.currentTarget.style.transform = 'translateY(-2px)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.borderColor = '#e5e7eb';
+                      e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.1)';
+                      e.currentTarget.style.transform = 'translateY(0)';
+                    }}
+                  >
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
                       <Users size={24} color="#C8102E" />
                     </div>
                     <div style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '0.25rem' }}>{stats.activeMentees}</div>
                     <div style={{ fontSize: '0.875rem', color: '#6b7280' }}>Active Mentees</div>
-                  </div>
-
-                  <div style={{ backgroundColor: 'white', borderRadius: '0.75rem', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', border: '1px solid #e5e7eb', padding: '1.25rem' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                      <Mail size={24} color="#f97316" />
-                    </div>
-                    <div style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '0.25rem' }}>{stats.pendingRequests}</div>
-                    <div style={{ fontSize: '0.875rem', color: '#6b7280' }}>Pending Requests</div>
-                  </div>
-
-                  <div style={{ backgroundColor: 'white', borderRadius: '0.75rem', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', border: '1px solid #e5e7eb', padding: '1.25rem' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                      <CheckCircle size={24} color="#16a34a" />
-                    </div>
-                    <div style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '0.25rem' }}>{stats.totalSessions}</div>
-                    <div style={{ fontSize: '0.875rem', color: '#6b7280' }}>Total Sessions</div>
+                    <div style={{ fontSize: '0.75rem', color: '#9ca3af', marginTop: '0.5rem' }}>Click to view</div>
                   </div>
                 </div>
 
@@ -1073,7 +1088,7 @@ export function MentorDashboard() {
                 {viewMode === 'list' && (
                   <div style={{ backgroundColor: 'white', borderRadius: '0.75rem', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', border: '1px solid #e5e7eb', padding: '1.5rem' }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
-                    <h2 style={{ fontSize: '1.25rem', fontWeight: 600 }}>My Mentees</h2>
+                    <h2 ref={myMenteesSectionRef} style={{ fontSize: '1.25rem', fontWeight: 600 }}>My Mentees</h2>
                     <span style={{ backgroundColor: '#f3f4f6', color: '#374151', padding: '0.25rem 0.75rem', borderRadius: '9999px', fontSize: '0.875rem', fontWeight: 500 }}>
                       {currentMentees.length} Active
                     </span>

@@ -253,7 +253,10 @@ export function AdminDashboard() {
           const matches = (matchesResponse.value as { matches: Match[] }).matches || [];
           setAllMatches(matches);
           const pendingCount = matches.filter(m => m.status === 'pending').length;
-          const activeCount = matches.filter(m => m.status === 'accepted').length;
+          // Count unique alumni in active matches, not the number of matches
+          const activeMatches = matches.filter(m => m.status === 'accepted');
+          const uniqueAlumniIds = new Set(activeMatches.map(m => m.alumni.id));
+          const activeCount = uniqueAlumniIds.size;
           const awaitingCount = matches.filter(m => m.status === 'confirmed').length;
           setPendingMatchesCount(pendingCount);
           setActiveMatchesCount(activeCount);
@@ -416,7 +419,10 @@ export function AdminDashboard() {
       const matches = response.matches || [];
       setAllMatches(matches);
       const pendingCount = matches.filter(m => m.status === 'pending').length;
-      const activeCount = matches.filter(m => m.status === 'accepted').length;
+      // Count unique alumni in active matches, not the number of matches
+      const activeMatches = matches.filter(m => m.status === 'accepted');
+      const uniqueAlumniIds = new Set(activeMatches.map(m => m.alumni.id));
+      const activeCount = uniqueAlumniIds.size;
       const awaitingCount = matches.filter(m => m.status === 'confirmed').length;
       setPendingMatchesCount(pendingCount);
       setActiveMatchesCount(activeCount);
@@ -471,7 +477,10 @@ export function AdminDashboard() {
         const matches = matchesResponse.value.matches || [];
         setAllMatches(matches);
         const pendingCount = matches.filter(m => m.status === 'pending').length;
-        const activeCount = matches.filter(m => m.status === 'accepted').length;
+        // Count unique alumni in active matches, not the number of matches
+        const activeMatches = matches.filter(m => m.status === 'accepted');
+        const uniqueAlumniIds = new Set(activeMatches.map(m => m.alumni.id));
+        const activeCount = uniqueAlumniIds.size;
         const awaitingCount = matches.filter(m => m.status === 'confirmed').length;
         setPendingMatchesCount(pendingCount);
         setActiveMatchesCount(activeCount);
@@ -523,7 +532,10 @@ export function AdminDashboard() {
         const matches = matchesResponse.value.matches || [];
         setAllMatches(matches);
         const pendingCount = matches.filter(m => m.status === 'pending').length;
-        const activeCount = matches.filter(m => m.status === 'accepted').length;
+        // Count unique alumni in active matches, not the number of matches
+        const activeMatches = matches.filter(m => m.status === 'accepted');
+        const uniqueAlumniIds = new Set(activeMatches.map(m => m.alumni.id));
+        const activeCount = uniqueAlumniIds.size;
         const awaitingCount = matches.filter(m => m.status === 'confirmed').length;
         setPendingMatchesCount(pendingCount);
         setActiveMatchesCount(activeCount);

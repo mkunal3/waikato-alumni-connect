@@ -28,7 +28,6 @@ export function MentorDashboard() {
   const [expandedCertification, setExpandedCertification] = useState<number | null>(null);
   const [coverLetterExpanded, setCoverLetterExpanded] = useState<boolean>(false);
   const [profileExpanded, setProfileExpanded] = useState<boolean>(false);
-  const myMenteesSectionRef = React.useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -111,13 +110,6 @@ export function MentorDashboard() {
     setSelectedMentee(null);
   };
 
-  const scrollToMyMentees = () => {
-    if (myMenteesSectionRef.current) {
-      myMenteesSectionRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      // Small offset to account for sticky header
-      window.scrollBy(0, -80);
-    }
-  };
 
   const handleAcceptRequest = async (requestId: number) => {
     try {
@@ -258,39 +250,6 @@ export function MentorDashboard() {
             <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1.5rem' }}>
               {/* Main Content */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                {/* Quick Stats */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '1rem' }}>
-                  <div 
-                    onClick={scrollToMyMentees}
-                    style={{ 
-                      backgroundColor: 'white', 
-                      borderRadius: '0.75rem', 
-                      boxShadow: '0 1px 3px rgba(0,0,0,0.1)', 
-                      border: '1px solid #e5e7eb', 
-                      padding: '1.25rem',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.borderColor = '#C8102E';
-                      e.currentTarget.style.boxShadow = '0 4px 6px rgba(0,0,0,0.1)';
-                      e.currentTarget.style.transform = 'translateY(-2px)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.borderColor = '#e5e7eb';
-                      e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.1)';
-                      e.currentTarget.style.transform = 'translateY(0)';
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                      <Users size={24} color="#C8102E" />
-                    </div>
-                    <div style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '0.25rem' }}>{stats.activeMentees}</div>
-                    <div style={{ fontSize: '0.875rem', color: '#6b7280' }}>Active Mentees</div>
-                    <div style={{ fontSize: '0.75rem', color: '#9ca3af', marginTop: '0.5rem' }}>Click to view</div>
-                  </div>
-                </div>
-
                 {/* Pending Match Requests List */}
                 {viewMode === 'list' && (
                   <>

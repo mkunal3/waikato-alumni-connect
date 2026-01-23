@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronDown, Globe, LayoutDashboard, LogOut } from 'lucide-react';
+import { ChevronDown, Globe, LayoutDashboard, LogOut, MessageSquare, User } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -9,6 +9,7 @@ import {
 } from './ui/dropdown-menu';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useAuth } from '../contexts/AuthContext';
+import { useMessageNotification } from '../contexts/MessageNotificationContext';
 import { content } from '../config/content';
 
 const waikatoLogo = '/waikato-logo.png';
@@ -17,6 +18,7 @@ export function WaikatoNavigation() {
   const navigate = useNavigate();
   const { language, setLanguage, t } = useLanguage();
   const { user, isAuthenticated, logout } = useAuth();
+  const { unreadCount } = useMessageNotification();
   const [isHovered, setIsHovered] = React.useState(false);
   const [isRegisterHovered, setIsRegisterHovered] = React.useState(false);
   
@@ -33,6 +35,16 @@ export function WaikatoNavigation() {
       navigate('/mentor/dashboard');
     } else if (user.role === 'admin') {
       navigate('/admin/dashboard');
+    }
+  };
+
+  const handleMessagesClick = () => {
+    if (!user) return;
+    // Navigate to dashboard where they can access chat
+    if (user.role === 'student') {
+      navigate('/student/dashboard');
+    } else if (user.role === 'alumni') {
+      navigate('/mentor/dashboard');
     }
   };
 
@@ -83,6 +95,31 @@ export function WaikatoNavigation() {
 
             {isAuthenticated && user ? (
               <>
+                {/* Messages Icon (only for students and alumni) */}
+                {(user.role === 'student' || user.role === 'alumni') && (
+                  <button
+                    onClick={handleMessagesClick}
+                    className="relative px-3 py-2 rounded-xl bg-white hover:bg-gray-50 transition-all flex items-center justify-center gap-2 focus:outline-none cursor-pointer"
+                    style={{ border: 'none', position: 'relative' }}
+                    title={unreadCount > 0 ? `${unreadCount} unread message${unreadCount > 1 ? 's' : ''}` : 'Messages'}
+                  >
+                    <MessageSquare className="w-5 h-5 text-gray-600" />
+                    {unreadCount > 0 && (
+                      <span
+                        className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center"
+                        style={{
+                          minWidth: '20px',
+                          height: '20px',
+                          padding: '0 6px',
+                          fontSize: '0.75rem',
+                        }}
+                      >
+                        {unreadCount > 99 ? '99+' : unreadCount}
+                      </span>
+                    )}
+                  </button>
+                )}
+                
                 {/* Profile Avatar */}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>

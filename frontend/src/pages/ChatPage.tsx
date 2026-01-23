@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { io, Socket } from 'socket.io-client';
 import { useAuth } from '../contexts/AuthContext';
+import { useMessageNotification } from '../contexts/MessageNotificationContext';
 import { apiRequest, API_BASE_URL, API_ENDPOINTS } from '../config/api';
 import { ArrowLeft, Send } from 'lucide-react';
 
@@ -31,6 +32,7 @@ export function ChatPage() {
   const { matchId } = useParams<{ matchId: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { setCurrentMatchId, markAsRead } = useMessageNotification();
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(true);
@@ -39,6 +41,19 @@ export function ChatPage() {
   const [isSending, setIsSending] = useState(false);
   const socketRef = useRef<Socket | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Set current match ID and mark as read when viewing
+  useEffect(() => {
+    if (matchId) {
+      const matchIdNum = parseInt(matchId);
+      setCurrentMatchId(matchIdNum);
+      markAsRead(matchIdNum);
+    }
+    
+    return () => {
+      setCurrentMatchId(null);
+    };
+  }, [matchId, setCurrentMatchId, markAsRead]);
 
   useEffect(() => {
     if (!matchId) {

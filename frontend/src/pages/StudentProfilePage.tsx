@@ -2330,7 +2330,7 @@ export function StudentProfilePage() {
                         {project.technologies && project.technologies.length > 0 && (
                           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '0.5rem' }}>
                             {project.technologies.slice(0, 3).map((tech, idx) => (
-                              <span key={idx} style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem', backgroundColor: '#f3f4f6', borderRadius: '9999px', color: '#6b7280' }}>
+                              <span key={idx} style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem', backgroundColor: '#f3f4f6', borderRadius: '9999px', color: '#6b7280', whiteSpace: 'nowrap' }}>
                                 {tech}
                               </span>
                             ))}

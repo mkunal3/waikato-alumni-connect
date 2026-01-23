@@ -4,7 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { apiRequest } from '../config/api';
 import { API_ENDPOINTS } from '../config/api';
 import { ProfileResponse } from '../types/auth';
-import { ArrowLeft, Save, X, ChevronDown, ChevronUp, Edit2 } from 'lucide-react';
+import { ArrowLeft, Save, X, ChevronDown } from 'lucide-react';
 
 const waikatoLogo = '/waikato-logo.png';
 
@@ -461,9 +461,9 @@ export function StudentProfilePage() {
           }));
           
           // Mark all loaded entries as saved
-          const workExpIds = new Set(workExpWithIds.map((exp: any) => exp.id));
-          const projectIds = new Set(projectsWithIds.map((proj: any) => proj.id));
-          const certIds = new Set(certsWithIds.map((cert: any) => cert.id));
+          const workExpIds = new Set(workExpWithIds.map((exp: any) => exp.id)) as Set<string>;
+          const projectIds = new Set(projectsWithIds.map((proj: any) => proj.id)) as Set<string>;
+          const certIds = new Set(certsWithIds.map((cert: any) => cert.id)) as Set<string>;
           setSavedWorkExperienceIds(workExpIds);
           setSavedProjectIds(projectIds);
           setSavedCertificationIds(certIds);
@@ -1784,7 +1784,6 @@ export function StudentProfilePage() {
             {formData.workExperience.map((exp) => {
               const isSaved = savedWorkExperienceIds.has(exp.id);
               const isExpanded = expandedWorkExperienceIds.has(exp.id);
-              const isEditing = !isSaved || isExpanded;
 
               // Compact card view (saved and not expanded)
               if (isSaved && !isExpanded) {
@@ -2301,7 +2300,6 @@ export function StudentProfilePage() {
             {formData.projects.map((project) => {
               const isSaved = savedProjectIds.has(project.id);
               const isExpanded = expandedProjectIds.has(project.id);
-              const isEditing = !isSaved || isExpanded;
 
               // Compact card view (saved and not expanded)
               if (isSaved && !isExpanded) {
@@ -2334,7 +2332,7 @@ export function StudentProfilePage() {
                         {project.technologies && project.technologies.length > 0 && (
                           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '0.5rem' }}>
                             {project.technologies.slice(0, 3).map((tech, idx) => (
-                              <span key={idx} style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem', backgroundColor: '#f3f4f6', borderRadius: '9999px', color: '#6b7280' }}>
+                              <span key={idx} style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem', backgroundColor: '#f3f4f6', borderRadius: '9999px', color: '#6b7280', whiteSpace: 'nowrap' }}>
                                 {tech}
                               </span>
                             ))}
@@ -2764,7 +2762,6 @@ export function StudentProfilePage() {
             {formData.certifications.map((cert) => {
               const isSaved = savedCertificationIds.has(cert.id);
               const isExpanded = expandedCertificationIds.has(cert.id);
-              const isEditing = !isSaved || isExpanded;
 
               // Compact card view (saved and not expanded)
               if (isSaved && !isExpanded) {

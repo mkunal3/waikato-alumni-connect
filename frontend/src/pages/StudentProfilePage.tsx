@@ -316,6 +316,8 @@ export function StudentProfilePage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   
+  // Track raw technology text for each project (for comfortable typing with commas/spaces)
+  const [projectTechRawText, setProjectTechRawText] = useState<Map<string, string>>(new Map());
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -875,6 +877,17 @@ export function StudentProfilePage() {
     const fullName = [formData.firstName.trim(), formData.lastName.trim()].filter(Boolean).join(' ');
 
     try {
+      // Convert projects: if technologies raw text exists, split it; otherwise keep array as-is
+      const processedProjects = formData.projects.map(project => {
+        const rawText = projectTechRawText.get(project.id);
+        return {
+          ...project,
+          technologies: rawText !== undefined && rawText.trim() !== '' 
+            ? rawText.split(',').map((t: string) => t.trim()).filter((t: string) => t.length > 0)
+            : project.technologies
+        };
+      });
+
       const updateData: any = {
         name: fullName || undefined,
         studentId: formData.studentId || undefined,
@@ -895,7 +908,7 @@ export function StudentProfilePage() {
         languages: formData.languages,
         interests: formData.interests,
         workExperience: formData.workExperience,
-        projects: formData.projects,
+        projects: processedProjects,
         certifications: formData.certifications,
       };
 
@@ -2471,10 +2484,12 @@ export function StudentProfilePage() {
                     </label>
                     <input
                       type="text"
-                      value={project.technologies.join(', ')}
+                      value={projectTechRawText.get(project.id) ?? project.technologies.join(', ')}
                       onChange={(e) => {
-                        const techs = e.target.value.split(',').map(t => t.trim()).filter(Boolean);
-                        handleUpdateProject(project.id, 'technologies', techs);
+                        const rawText = e.target.value;
+                        // Store raw text for comfortable typing with commas and spaces
+                        // Splitting happens only on save
+                        setProjectTechRawText(prev => new Map(prev).set(project.id, rawText));
                       }}
                       placeholder="e.g., React, Node.js, MongoDB"
                       style={{

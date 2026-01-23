@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { useLanguage } from '../contexts/LanguageContext';
 import { content } from '../config/content';
 
@@ -49,31 +50,31 @@ export function WaikatoFooter() {
             <div>
               <h3 className="text-black" style={{ fontSize: '14px', fontWeight: 900, lineHeight: '1.2', marginBottom: '12px', letterSpacing: '0.01em' }}>Useful links</h3>
               <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
-                <li style={{ marginBottom: '6px' }}><a href="#" className="text-gray-700" style={{ fontSize: '13px', fontWeight: 400, textDecoration: 'underline', lineHeight: '1.5', color: '#4a4a4a' }}>Find a Mentor</a></li>
-                <li style={{ marginBottom: '6px' }}><a href="#" className="text-gray-700" style={{ fontSize: '13px', fontWeight: 400, textDecoration: 'underline', lineHeight: '1.5', color: '#4a4a4a' }}>Become a Mentor</a></li>
-                <li style={{ marginBottom: '6px' }}><a href="#" className="text-gray-700" style={{ fontSize: '13px', fontWeight: 400, textDecoration: 'underline', lineHeight: '1.5', color: '#4a4a4a' }}>How to apply</a></li>
-                <li style={{ marginBottom: '6px' }}><a href="#" className="text-gray-700" style={{ fontSize: '13px', fontWeight: 400, textDecoration: 'underline', lineHeight: '1.5', color: '#4a4a4a' }}>Programme guide</a></li>
-                <li style={{ marginBottom: '6px' }}><a href="#" className="text-gray-700" style={{ fontSize: '13px', fontWeight: 400, textDecoration: 'underline', lineHeight: '1.5', color: '#4a4a4a' }}>FAQs</a></li>
+                <li style={{ marginBottom: '6px' }}><Link to="/student/browse-mentors" className="text-gray-700" style={{ fontSize: '13px', fontWeight: 400, textDecoration: 'underline', lineHeight: '1.5', color: '#4a4a4a' }}>Find a Mentor</Link></li>
+                <li style={{ marginBottom: '6px' }}><Link to="/" className="text-gray-700" style={{ fontSize: '13px', fontWeight: 400, textDecoration: 'underline', lineHeight: '1.5', color: '#4a4a4a' }}>Become a Mentor {/* TODO: replace with real route */}</Link></li>
+                <li style={{ marginBottom: '6px' }}><Link to="/" className="text-gray-700" style={{ fontSize: '13px', fontWeight: 400, textDecoration: 'underline', lineHeight: '1.5', color: '#4a4a4a' }}>How to apply {/* TODO: replace with real route */}</Link></li>
+                <li style={{ marginBottom: '6px' }}><Link to="/" className="text-gray-700" style={{ fontSize: '13px', fontWeight: 400, textDecoration: 'underline', lineHeight: '1.5', color: '#4a4a4a' }}>Programme guide {/* TODO: replace with real route */}</Link></li>
+                <li style={{ marginBottom: '6px' }}><Link to="/" className="text-gray-700" style={{ fontSize: '13px', fontWeight: 400, textDecoration: 'underline', lineHeight: '1.5', color: '#4a4a4a' }}>FAQs {/* TODO: replace with real route */}</Link></li>
               </ul>
             </div>
             <div>
               <h3 className="text-black" style={{ fontSize: '14px', fontWeight: 900, lineHeight: '1.2', marginBottom: '12px', letterSpacing: '0.01em' }}>Popular links</h3>
               <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
-                <li style={{ marginBottom: '6px' }}><a href="#" className="text-gray-700" style={{ fontSize: '13px', fontWeight: 400, textDecoration: 'underline', lineHeight: '1.5', color: '#4a4a4a' }}>Mentoring types</a></li>
-                <li style={{ marginBottom: '6px' }}><a href="#" className="text-gray-700" style={{ fontSize: '13px', fontWeight: 400, textDecoration: 'underline', lineHeight: '1.5', color: '#4a4a4a' }}>Success stories</a></li>
-                <li style={{ marginBottom: '6px' }}><a href="#" className="text-gray-700" style={{ fontSize: '13px', fontWeight: 400, textDecoration: 'underline', lineHeight: '1.5', color: '#4a4a4a' }}>Events</a></li>
-                <li style={{ marginBottom: '6px' }}><a href="#" className="text-gray-700" style={{ fontSize: '13px', fontWeight: 400, textDecoration: 'underline', lineHeight: '1.5', color: '#4a4a4a' }}>Resources</a></li>
-                <li style={{ marginBottom: '6px' }}><a href="#" className="text-gray-700" style={{ fontSize: '13px', fontWeight: 400, textDecoration: 'underline', lineHeight: '1.5', color: '#4a4a4a' }}>Support</a></li>
+                <li style={{ marginBottom: '6px' }}><Link to="/" className="text-gray-700" style={{ fontSize: '13px', fontWeight: 400, textDecoration: 'underline', lineHeight: '1.5', color: '#4a4a4a' }}>Mentoring types {/* TODO: replace with real route */}</Link></li>
+                <li style={{ marginBottom: '6px' }}><Link to="/" className="text-gray-700" style={{ fontSize: '13px', fontWeight: 400, textDecoration: 'underline', lineHeight: '1.5', color: '#4a4a4a' }}>Success stories {/* TODO: replace with real route */}</Link></li>
+                <li style={{ marginBottom: '6px' }}><Link to="/" className="text-gray-700" style={{ fontSize: '13px', fontWeight: 400, textDecoration: 'underline', lineHeight: '1.5', color: '#4a4a4a' }}>Events {/* TODO: replace with real route */}</Link></li>
+                <li style={{ marginBottom: '6px' }}><Link to="/" className="text-gray-700" style={{ fontSize: '13px', fontWeight: 400, textDecoration: 'underline', lineHeight: '1.5', color: '#4a4a4a' }}>Resources {/* TODO: replace with real route */}</Link></li>
+                <li style={{ marginBottom: '6px' }}><Link to="/" className="text-gray-700" style={{ fontSize: '13px', fontWeight: 400, textDecoration: 'underline', lineHeight: '1.5', color: '#4a4a4a' }}>Support {/* TODO: replace with real route */}</Link></li>
               </ul>
             </div>
             <div>
               <h3 className="text-black" style={{ fontSize: '14px', fontWeight: 900, lineHeight: '1.2', marginBottom: '12px', letterSpacing: '0.01em' }}>About us</h3>
               <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
-                <li style={{ marginBottom: '6px' }}><a href="#" className="text-gray-700" style={{ fontSize: '13px', fontWeight: 400, textDecoration: 'underline', lineHeight: '1.5', color: '#4a4a4a' }}>Our story</a></li>
-                <li style={{ marginBottom: '6px' }}><a href="#" className="text-gray-700" style={{ fontSize: '13px', fontWeight: 400, textDecoration: 'underline', lineHeight: '1.5', color: '#4a4a4a' }}>News and events</a></li>
-                <li style={{ marginBottom: '6px' }}><a href="#" className="text-gray-700" style={{ fontSize: '13px', fontWeight: 400, textDecoration: 'underline', lineHeight: '1.5', color: '#4a4a4a' }}>Alumni network</a></li>
-                <li style={{ marginBottom: '6px' }}><a href="#" className="text-gray-700" style={{ fontSize: '13px', fontWeight: 400, textDecoration: 'underline', lineHeight: '1.5', color: '#4a4a4a' }}>Contact us</a></li>
-                <li style={{ marginBottom: '6px' }}><a href="#" className="text-gray-700" style={{ fontSize: '13px', fontWeight: 400, textDecoration: 'underline', lineHeight: '1.5', color: '#4a4a4a' }}>Careers</a></li>
+                <li style={{ marginBottom: '6px' }}><Link to="/" className="text-gray-700" style={{ fontSize: '13px', fontWeight: 400, textDecoration: 'underline', lineHeight: '1.5', color: '#4a4a4a' }}>Our story {/* TODO: replace with real route */}</Link></li>
+                <li style={{ marginBottom: '6px' }}><Link to="/" className="text-gray-700" style={{ fontSize: '13px', fontWeight: 400, textDecoration: 'underline', lineHeight: '1.5', color: '#4a4a4a' }}>News and events {/* TODO: replace with real route */}</Link></li>
+                <li style={{ marginBottom: '6px' }}><Link to="/" className="text-gray-700" style={{ fontSize: '13px', fontWeight: 400, textDecoration: 'underline', lineHeight: '1.5', color: '#4a4a4a' }}>Alumni network {/* TODO: replace with real route */}</Link></li>
+                <li style={{ marginBottom: '6px' }}><Link to="/" className="text-gray-700" style={{ fontSize: '13px', fontWeight: 400, textDecoration: 'underline', lineHeight: '1.5', color: '#4a4a4a' }}>Contact us {/* TODO: replace with real route */}</Link></li>
+                <li style={{ marginBottom: '6px' }}><Link to="/" className="text-gray-700" style={{ fontSize: '13px', fontWeight: 400, textDecoration: 'underline', lineHeight: '1.5', color: '#4a4a4a' }}>Careers {/* TODO: replace with real route */}</Link></li>
               </ul>
             </div>
             <div>
@@ -112,31 +113,31 @@ export function WaikatoFooter() {
             <div>
               <h3 className="text-black" style={{ fontSize: '14px', fontWeight: 900, lineHeight: '1.2', marginBottom: '12px', letterSpacing: '0.01em' }}>Useful links</h3>
               <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
-                <li style={{ marginBottom: '6px' }}><a href="#" className="text-gray-700" style={{ fontSize: '13px', fontWeight: 400, textDecoration: 'underline', lineHeight: '1.5', color: '#4a4a4a' }}>Find a Mentor</a></li>
-                <li style={{ marginBottom: '6px' }}><a href="#" className="text-gray-700" style={{ fontSize: '13px', fontWeight: 400, textDecoration: 'underline', lineHeight: '1.5', color: '#4a4a4a' }}>Become a Mentor</a></li>
-                <li style={{ marginBottom: '6px' }}><a href="#" className="text-gray-700" style={{ fontSize: '13px', fontWeight: 400, textDecoration: 'underline', lineHeight: '1.5', color: '#4a4a4a' }}>How to apply</a></li>
-                <li style={{ marginBottom: '6px' }}><a href="#" className="text-gray-700" style={{ fontSize: '13px', fontWeight: 400, textDecoration: 'underline', lineHeight: '1.5', color: '#4a4a4a' }}>Programme guide</a></li>
-                <li style={{ marginBottom: '6px' }}><a href="#" className="text-gray-700" style={{ fontSize: '13px', fontWeight: 400, textDecoration: 'underline', lineHeight: '1.5', color: '#4a4a4a' }}>FAQs</a></li>
+                <li style={{ marginBottom: '6px' }}><Link to="/student/browse-mentors" className="text-gray-700" style={{ fontSize: '13px', fontWeight: 400, textDecoration: 'underline', lineHeight: '1.5', color: '#4a4a4a' }}>Find a Mentor</Link></li>
+                <li style={{ marginBottom: '6px' }}><Link to="/" className="text-gray-700" style={{ fontSize: '13px', fontWeight: 400, textDecoration: 'underline', lineHeight: '1.5', color: '#4a4a4a' }}>Become a Mentor {/* TODO: replace with real route */}</Link></li>
+                <li style={{ marginBottom: '6px' }}><Link to="/" className="text-gray-700" style={{ fontSize: '13px', fontWeight: 400, textDecoration: 'underline', lineHeight: '1.5', color: '#4a4a4a' }}>How to apply {/* TODO: replace with real route */}</Link></li>
+                <li style={{ marginBottom: '6px' }}><Link to="/" className="text-gray-700" style={{ fontSize: '13px', fontWeight: 400, textDecoration: 'underline', lineHeight: '1.5', color: '#4a4a4a' }}>Programme guide {/* TODO: replace with real route */}</Link></li>
+                <li style={{ marginBottom: '6px' }}><Link to="/" className="text-gray-700" style={{ fontSize: '13px', fontWeight: 400, textDecoration: 'underline', lineHeight: '1.5', color: '#4a4a4a' }}>FAQs {/* TODO: replace with real route */}</Link></li>
               </ul>
             </div>
             <div>
               <h3 className="text-black" style={{ fontSize: '14px', fontWeight: 900, lineHeight: '1.2', marginBottom: '12px', letterSpacing: '0.01em' }}>Popular links</h3>
               <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
-                <li style={{ marginBottom: '6px' }}><a href="#" className="text-gray-700" style={{ fontSize: '13px', fontWeight: 400, textDecoration: 'underline', lineHeight: '1.5', color: '#4a4a4a' }}>Mentoring types</a></li>
-                <li style={{ marginBottom: '6px' }}><a href="#" className="text-gray-700" style={{ fontSize: '13px', fontWeight: 400, textDecoration: 'underline', lineHeight: '1.5', color: '#4a4a4a' }}>Success stories</a></li>
-                <li style={{ marginBottom: '6px' }}><a href="#" className="text-gray-700" style={{ fontSize: '13px', fontWeight: 400, textDecoration: 'underline', lineHeight: '1.5', color: '#4a4a4a' }}>Events</a></li>
-                <li style={{ marginBottom: '6px' }}><a href="#" className="text-gray-700" style={{ fontSize: '13px', fontWeight: 400, textDecoration: 'underline', lineHeight: '1.5', color: '#4a4a4a' }}>Resources</a></li>
-                <li style={{ marginBottom: '6px' }}><a href="#" className="text-gray-700" style={{ fontSize: '13px', fontWeight: 400, textDecoration: 'underline', lineHeight: '1.5', color: '#4a4a4a' }}>Support</a></li>
+                <li style={{ marginBottom: '6px' }}><Link to="/" className="text-gray-700" style={{ fontSize: '13px', fontWeight: 400, textDecoration: 'underline', lineHeight: '1.5', color: '#4a4a4a' }}>Mentoring types {/* TODO: replace with real route */}</Link></li>
+                <li style={{ marginBottom: '6px' }}><Link to="/" className="text-gray-700" style={{ fontSize: '13px', fontWeight: 400, textDecoration: 'underline', lineHeight: '1.5', color: '#4a4a4a' }}>Success stories {/* TODO: replace with real route */}</Link></li>
+                <li style={{ marginBottom: '6px' }}><Link to="/" className="text-gray-700" style={{ fontSize: '13px', fontWeight: 400, textDecoration: 'underline', lineHeight: '1.5', color: '#4a4a4a' }}>Events {/* TODO: replace with real route */}</Link></li>
+                <li style={{ marginBottom: '6px' }}><Link to="/" className="text-gray-700" style={{ fontSize: '13px', fontWeight: 400, textDecoration: 'underline', lineHeight: '1.5', color: '#4a4a4a' }}>Resources {/* TODO: replace with real route */}</Link></li>
+                <li style={{ marginBottom: '6px' }}><Link to="/" className="text-gray-700" style={{ fontSize: '13px', fontWeight: 400, textDecoration: 'underline', lineHeight: '1.5', color: '#4a4a4a' }}>Support {/* TODO: replace with real route */}</Link></li>
               </ul>
             </div>
             <div>
               <h3 className="text-black" style={{ fontSize: '14px', fontWeight: 900, lineHeight: '1.2', marginBottom: '12px', letterSpacing: '0.01em' }}>About us</h3>
               <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
-                <li style={{ marginBottom: '6px' }}><a href="#" className="text-gray-700" style={{ fontSize: '13px', fontWeight: 400, textDecoration: 'underline', lineHeight: '1.5', color: '#4a4a4a' }}>Our story</a></li>
-                <li style={{ marginBottom: '6px' }}><a href="#" className="text-gray-700" style={{ fontSize: '13px', fontWeight: 400, textDecoration: 'underline', lineHeight: '1.5', color: '#4a4a4a' }}>News and events</a></li>
-                <li style={{ marginBottom: '6px' }}><a href="#" className="text-gray-700" style={{ fontSize: '13px', fontWeight: 400, textDecoration: 'underline', lineHeight: '1.5', color: '#4a4a4a' }}>Alumni network</a></li>
-                <li style={{ marginBottom: '6px' }}><a href="#" className="text-gray-700" style={{ fontSize: '13px', fontWeight: 400, textDecoration: 'underline', lineHeight: '1.5', color: '#4a4a4a' }}>Contact us</a></li>
-                <li style={{ marginBottom: '6px' }}><a href="#" className="text-gray-700" style={{ fontSize: '13px', fontWeight: 400, textDecoration: 'underline', lineHeight: '1.5', color: '#4a4a4a' }}>Careers</a></li>
+                <li style={{ marginBottom: '6px' }}><Link to="/" className="text-gray-700" style={{ fontSize: '13px', fontWeight: 400, textDecoration: 'underline', lineHeight: '1.5', color: '#4a4a4a' }}>Our story {/* TODO: replace with real route */}</Link></li>
+                <li style={{ marginBottom: '6px' }}><Link to="/" className="text-gray-700" style={{ fontSize: '13px', fontWeight: 400, textDecoration: 'underline', lineHeight: '1.5', color: '#4a4a4a' }}>News and events {/* TODO: replace with real route */}</Link></li>
+                <li style={{ marginBottom: '6px' }}><Link to="/" className="text-gray-700" style={{ fontSize: '13px', fontWeight: 400, textDecoration: 'underline', lineHeight: '1.5', color: '#4a4a4a' }}>Alumni network {/* TODO: replace with real route */}</Link></li>
+                <li style={{ marginBottom: '6px' }}><Link to="/" className="text-gray-700" style={{ fontSize: '13px', fontWeight: 400, textDecoration: 'underline', lineHeight: '1.5', color: '#4a4a4a' }}>Contact us {/* TODO: replace with real route */}</Link></li>
+                <li style={{ marginBottom: '6px' }}><Link to="/" className="text-gray-700" style={{ fontSize: '13px', fontWeight: 400, textDecoration: 'underline', lineHeight: '1.5', color: '#4a4a4a' }}>Careers {/* TODO: replace with real route */}</Link></li>
               </ul>
             </div>
             <div>
@@ -175,31 +176,31 @@ export function WaikatoFooter() {
             <div>
               <h3 className="text-black" style={{ fontSize: '14px', fontWeight: 900, lineHeight: '1.2', marginBottom: '12px', letterSpacing: '0.01em' }}>Useful links</h3>
               <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
-                <li style={{ marginBottom: '6px' }}><a href="#" className="text-gray-700" style={{ fontSize: '13px', fontWeight: 400, textDecoration: 'underline', lineHeight: '1.5', color: '#4a4a4a' }}>Find a Mentor</a></li>
-                <li style={{ marginBottom: '6px' }}><a href="#" className="text-gray-700" style={{ fontSize: '13px', fontWeight: 400, textDecoration: 'underline', lineHeight: '1.5', color: '#4a4a4a' }}>Become a Mentor</a></li>
-                <li style={{ marginBottom: '6px' }}><a href="#" className="text-gray-700" style={{ fontSize: '13px', fontWeight: 400, textDecoration: 'underline', lineHeight: '1.5', color: '#4a4a4a' }}>How to apply</a></li>
-                <li style={{ marginBottom: '6px' }}><a href="#" className="text-gray-700" style={{ fontSize: '13px', fontWeight: 400, textDecoration: 'underline', lineHeight: '1.5', color: '#4a4a4a' }}>Programme guide</a></li>
-                <li style={{ marginBottom: '6px' }}><a href="#" className="text-gray-700" style={{ fontSize: '13px', fontWeight: 400, textDecoration: 'underline', lineHeight: '1.5', color: '#4a4a4a' }}>FAQs</a></li>
+                <li style={{ marginBottom: '6px' }}><Link to="/student/browse-mentors" className="text-gray-700" style={{ fontSize: '13px', fontWeight: 400, textDecoration: 'underline', lineHeight: '1.5', color: '#4a4a4a' }}>Find a Mentor</Link></li>
+                <li style={{ marginBottom: '6px' }}><Link to="/" className="text-gray-700" style={{ fontSize: '13px', fontWeight: 400, textDecoration: 'underline', lineHeight: '1.5', color: '#4a4a4a' }}>Become a Mentor {/* TODO: replace with real route */}</Link></li>
+                <li style={{ marginBottom: '6px' }}><Link to="/" className="text-gray-700" style={{ fontSize: '13px', fontWeight: 400, textDecoration: 'underline', lineHeight: '1.5', color: '#4a4a4a' }}>How to apply {/* TODO: replace with real route */}</Link></li>
+                <li style={{ marginBottom: '6px' }}><Link to="/" className="text-gray-700" style={{ fontSize: '13px', fontWeight: 400, textDecoration: 'underline', lineHeight: '1.5', color: '#4a4a4a' }}>Programme guide {/* TODO: replace with real route */}</Link></li>
+                <li style={{ marginBottom: '6px' }}><Link to="/" className="text-gray-700" style={{ fontSize: '13px', fontWeight: 400, textDecoration: 'underline', lineHeight: '1.5', color: '#4a4a4a' }}>FAQs {/* TODO: replace with real route */}</Link></li>
               </ul>
             </div>
             <div>
               <h3 className="text-black" style={{ fontSize: '14px', fontWeight: 900, lineHeight: '1.2', marginBottom: '12px', letterSpacing: '0.01em' }}>Popular links</h3>
               <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
-                <li style={{ marginBottom: '6px' }}><a href="#" className="text-gray-700" style={{ fontSize: '13px', fontWeight: 400, textDecoration: 'underline', lineHeight: '1.5', color: '#4a4a4a' }}>Mentoring types</a></li>
-                <li style={{ marginBottom: '6px' }}><a href="#" className="text-gray-700" style={{ fontSize: '13px', fontWeight: 400, textDecoration: 'underline', lineHeight: '1.5', color: '#4a4a4a' }}>Success stories</a></li>
-                <li style={{ marginBottom: '6px' }}><a href="#" className="text-gray-700" style={{ fontSize: '13px', fontWeight: 400, textDecoration: 'underline', lineHeight: '1.5', color: '#4a4a4a' }}>Events</a></li>
-                <li style={{ marginBottom: '6px' }}><a href="#" className="text-gray-700" style={{ fontSize: '13px', fontWeight: 400, textDecoration: 'underline', lineHeight: '1.5', color: '#4a4a4a' }}>Resources</a></li>
-                <li style={{ marginBottom: '6px' }}><a href="#" className="text-gray-700" style={{ fontSize: '13px', fontWeight: 400, textDecoration: 'underline', lineHeight: '1.5', color: '#4a4a4a' }}>Support</a></li>
+                <li style={{ marginBottom: '6px' }}><Link to="/" className="text-gray-700" style={{ fontSize: '13px', fontWeight: 400, textDecoration: 'underline', lineHeight: '1.5', color: '#4a4a4a' }}>Mentoring types {/* TODO: replace with real route */}</Link></li>
+                <li style={{ marginBottom: '6px' }}><Link to="/" className="text-gray-700" style={{ fontSize: '13px', fontWeight: 400, textDecoration: 'underline', lineHeight: '1.5', color: '#4a4a4a' }}>Success stories {/* TODO: replace with real route */}</Link></li>
+                <li style={{ marginBottom: '6px' }}><Link to="/" className="text-gray-700" style={{ fontSize: '13px', fontWeight: 400, textDecoration: 'underline', lineHeight: '1.5', color: '#4a4a4a' }}>Events {/* TODO: replace with real route */}</Link></li>
+                <li style={{ marginBottom: '6px' }}><Link to="/" className="text-gray-700" style={{ fontSize: '13px', fontWeight: 400, textDecoration: 'underline', lineHeight: '1.5', color: '#4a4a4a' }}>Resources {/* TODO: replace with real route */}</Link></li>
+                <li style={{ marginBottom: '6px' }}><Link to="/" className="text-gray-700" style={{ fontSize: '13px', fontWeight: 400, textDecoration: 'underline', lineHeight: '1.5', color: '#4a4a4a' }}>Support {/* TODO: replace with real route */}</Link></li>
               </ul>
             </div>
             <div>
               <h3 className="text-black" style={{ fontSize: '14px', fontWeight: 900, lineHeight: '1.2', marginBottom: '12px', letterSpacing: '0.01em' }}>About us</h3>
               <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
-                <li style={{ marginBottom: '6px' }}><a href="#" className="text-gray-700" style={{ fontSize: '13px', fontWeight: 400, textDecoration: 'underline', lineHeight: '1.5', color: '#4a4a4a' }}>Our story</a></li>
-                <li style={{ marginBottom: '6px' }}><a href="#" className="text-gray-700" style={{ fontSize: '13px', fontWeight: 400, textDecoration: 'underline', lineHeight: '1.5', color: '#4a4a4a' }}>News and events</a></li>
-                <li style={{ marginBottom: '6px' }}><a href="#" className="text-gray-700" style={{ fontSize: '13px', fontWeight: 400, textDecoration: 'underline', lineHeight: '1.5', color: '#4a4a4a' }}>Alumni network</a></li>
-                <li style={{ marginBottom: '6px' }}><a href="#" className="text-gray-700" style={{ fontSize: '13px', fontWeight: 400, textDecoration: 'underline', lineHeight: '1.5', color: '#4a4a4a' }}>Contact us</a></li>
-                <li style={{ marginBottom: '6px' }}><a href="#" className="text-gray-700" style={{ fontSize: '13px', fontWeight: 400, textDecoration: 'underline', lineHeight: '1.5', color: '#4a4a4a' }}>Careers</a></li>
+                <li style={{ marginBottom: '6px' }}><Link to="/" className="text-gray-700" style={{ fontSize: '13px', fontWeight: 400, textDecoration: 'underline', lineHeight: '1.5', color: '#4a4a4a' }}>Our story {/* TODO: replace with real route */}</Link></li>
+                <li style={{ marginBottom: '6px' }}><Link to="/" className="text-gray-700" style={{ fontSize: '13px', fontWeight: 400, textDecoration: 'underline', lineHeight: '1.5', color: '#4a4a4a' }}>News and events {/* TODO: replace with real route */}</Link></li>
+                <li style={{ marginBottom: '6px' }}><Link to="/" className="text-gray-700" style={{ fontSize: '13px', fontWeight: 400, textDecoration: 'underline', lineHeight: '1.5', color: '#4a4a4a' }}>Alumni network {/* TODO: replace with real route */}</Link></li>
+                <li style={{ marginBottom: '6px' }}><Link to="/" className="text-gray-700" style={{ fontSize: '13px', fontWeight: 400, textDecoration: 'underline', lineHeight: '1.5', color: '#4a4a4a' }}>Contact us {/* TODO: replace with real route */}</Link></li>
+                <li style={{ marginBottom: '6px' }}><Link to="/" className="text-gray-700" style={{ fontSize: '13px', fontWeight: 400, textDecoration: 'underline', lineHeight: '1.5', color: '#4a4a4a' }}>Careers {/* TODO: replace with real route */}</Link></li>
               </ul>
             </div>
             <div>
@@ -236,32 +237,32 @@ export function WaikatoFooter() {
       <div className="bg-[#2c2c2c] text-white py-6">
         <div className="max-w-[1440px] mx-auto px-12 flex flex-row justify-between items-center">
           <div className="flex gap-6">
-            <a href="#" className="text-gray-300 hover:text-white transition-colors text-sm">
-              Copyright and legal statement
-            </a>
-            <a href="#" className="text-gray-300 hover:text-white transition-colors text-sm">
-              Privacy policy
-            </a>
-            <a href="#" className="text-gray-300 hover:text-white transition-colors text-sm">
-              Accessibility statement
-            </a>
+            <Link to="/" className="text-gray-300 hover:text-white transition-colors text-sm">
+              Copyright and legal statement {/* TODO: replace with real route */}
+            </Link>
+            <Link to="/" className="text-gray-300 hover:text-white transition-colors text-sm">
+              Privacy policy {/* TODO: replace with real route */}
+            </Link>
+            <Link to="/" className="text-gray-300 hover:text-white transition-colors text-sm">
+              Accessibility statement {/* TODO: replace with real route */}
+            </Link>
           </div>
           <div className="flex gap-4">
-            <a href="#" className="w-10 h-10 rounded-full bg-white flex items-center justify-center hover:bg-gray-200 transition-colors">
+            <Link to="/" className="w-10 h-10 rounded-full bg-white flex items-center justify-center hover:bg-gray-200 transition-colors" title="Facebook">
               <span className="text-black text-lg">f</span>
-            </a>
-            <a href="#" className="w-10 h-10 rounded-full bg-white flex items-center justify-center hover:bg-gray-200 transition-colors">
+            </Link>
+            <Link to="/" className="w-10 h-10 rounded-full bg-white flex items-center justify-center hover:bg-gray-200 transition-colors" title="Instagram">
               <span className="text-black text-lg">in</span>
-            </a>
-            <a href="#" className="w-10 h-10 rounded-full bg-white flex items-center justify-center hover:bg-gray-200 transition-colors">
+            </Link>
+            <Link to="/" className="w-10 h-10 rounded-full bg-white flex items-center justify-center hover:bg-gray-200 transition-colors" title="LinkedIn">
               <span className="text-black text-lg">Li</span>
-            </a>
-            <a href="#" className="w-10 h-10 rounded-full bg-white flex items-center justify-center hover:bg-gray-200 transition-colors">
+            </Link>
+            <Link to="/" className="w-10 h-10 rounded-full bg-white flex items-center justify-center hover:bg-gray-200 transition-colors" title="X">
               <span className="text-black text-lg">X</span>
-            </a>
-            <a href="#" className="w-10 h-10 rounded-full bg-white flex items-center justify-center hover:bg-gray-200 transition-colors">
+            </Link>
+            <Link to="/" className="w-10 h-10 rounded-full bg-white flex items-center justify-center hover:bg-gray-200 transition-colors" title="YouTube">
               <span className="text-black text-lg">Y</span>
-            </a>
+            </Link>
           </div>
         </div>
       </div>

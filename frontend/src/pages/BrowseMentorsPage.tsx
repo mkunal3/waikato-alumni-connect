@@ -18,6 +18,7 @@ interface AvailableMentor {
   currentPosition?: string;
   skillsOffered?: string[];
   mentoringGoals?: string[];
+  mentoringTypes?: string[]; // oneOff, vocational, employment
   about?: string;
   workExperience?: Array<{
     id: string;

@@ -71,6 +71,7 @@ router.get(
           currentPosition: true,
           skillsOffered: true,
           mentoringGoals: true,
+          mentoringTypes: true,
           about: true,
           workExperience: true,
         },

@@ -41,6 +41,8 @@ model User {
   projects           Json?
   certifications     Json?
   contactEmail       String?
+  mentoringTypes     String[]  // For alumni: types they support (oneOff, vocational, employment)
+  preferredMentoringType String? // For students: their preferred type
   alumniMatches      Match[]   @relation("AlumniMatches")
   confirmedMatches   Match[]   @relation("ConfirmedMatches")
   studentMatches     Match[]   @relation("StudentMatches")

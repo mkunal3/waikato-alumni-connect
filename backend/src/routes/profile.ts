@@ -23,6 +23,8 @@ const profileSelect = {
   mentoringGoals: true,
   skillsOffered: true,
   skillsWanted: true,
+  mentoringTypes: true,
+  preferredMentoringType: true,
   about: true,
   location: true,
   linkedInUrl: true,
@@ -87,6 +89,8 @@ router.put(
         mentoringGoals,
         skillsOffered,
         skillsWanted,
+        mentoringTypes,
+        preferredMentoringType,
         about,
         location,
         linkedInUrl,
@@ -116,6 +120,8 @@ router.put(
       if (mentoringGoals !== undefined) data.mentoringGoals = mentoringGoals;
       if (skillsOffered !== undefined) data.skillsOffered = skillsOffered;
       if (skillsWanted !== undefined) data.skillsWanted = skillsWanted;
+      if (mentoringTypes !== undefined) data.mentoringTypes = mentoringTypes || [];
+      if (preferredMentoringType !== undefined) data.preferredMentoringType = preferredMentoringType || null;
       if (about !== undefined) data.about = about;
       if (location !== undefined) data.location = location;
       if (linkedInUrl !== undefined) data.linkedInUrl = linkedInUrl;

@@ -327,6 +327,7 @@ export function StudentProfilePage() {
     academicFocus: '',
     mentoringGoals: [] as string[],
     skillsWanted: [] as string[],
+    preferredMentoringType: '', // oneOff, vocational, or employment
     // New fields
     about: '',
     location: '',
@@ -422,6 +423,7 @@ export function StudentProfilePage() {
             academicFocus: userData?.academicFocus || '',
             mentoringGoals: response.user.mentoringGoals || [],
             skillsWanted: response.user.skillsWanted || [],
+            preferredMentoringType: (response.user as any).preferredMentoringType || '',
             about: userData?.about || '',
             location: userData?.location || '',
             linkedInUrl: userData?.linkedInUrl || '',
@@ -502,6 +504,7 @@ export function StudentProfilePage() {
           academicFocus: '',
           mentoringGoals: [],
           skillsWanted: [],
+          preferredMentoringType: '',
           about: '',
           location: '',
           linkedInUrl: '',
@@ -882,6 +885,7 @@ export function StudentProfilePage() {
         academicFocus: formData.academicFocus || undefined,
         mentoringGoals: formData.mentoringGoals,
         skillsWanted: formData.skillsWanted,
+        preferredMentoringType: formData.preferredMentoringType || undefined,
         about: formData.about || undefined,
         location: formData.location || undefined,
         linkedInUrl: formData.linkedInUrl || undefined,

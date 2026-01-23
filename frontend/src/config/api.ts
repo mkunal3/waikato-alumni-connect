@@ -50,6 +50,7 @@ export const API_ENDPOINTS = {
   adminRejectAlumni: (userId: number) => `/admin/mentors/${userId}/reject`,
   adminGetInvitationCode: '/admin/invitation-code',
   adminCreateInvitationCode: '/admin/invitation-code',
+  adminCreateMatch: '/admin/matches/create',
   
   // Utility
   health: '/',

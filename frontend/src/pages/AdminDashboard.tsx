@@ -169,6 +169,11 @@ export function AdminDashboard() {
   const [newInvitationCode, setNewInvitationCode] = useState('');
   const [showInvitationModal, setShowInvitationModal] = useState(false);
   const [creatingInvitationCode, setCreatingInvitationCode] = useState(false);
+  const [showCreateMatchModal, setShowCreateMatchModal] = useState(false);
+  const [selectedStudentForMatch, setSelectedStudentForMatch] = useState<Student | null>(null);
+  const [selectedAlumniForMatch, setSelectedAlumniForMatch] = useState<Alumni | null>(null);
+  const [matchCoverLetter, setMatchCoverLetter] = useState('');
+  const [creatingMatch, setCreatingMatch] = useState(false);
 
   // Update URL when viewMode changes
   useEffect(() => {
@@ -511,6 +516,65 @@ export function AdminDashboard() {
       setError(err instanceof Error ? err.message : 'Failed to approve match');
     } finally {
       setProcessingMatch(null);
+    }
+  };
+
+  const handleCreateMatch = async () => {
+    if (!selectedStudentForMatch || !selectedAlumniForMatch) {
+      setError('Please select both a student and an alumni');
+      return;
+    }
+
+    try {
+      setCreatingMatch(true);
+      setError(null);
+
+      await apiRequest(API_ENDPOINTS.adminCreateMatch, {
+        method: 'POST',
+        body: JSON.stringify({
+          studentId: selectedStudentForMatch.id,
+          alumniId: selectedAlumniForMatch.id,
+          coverLetter: matchCoverLetter.trim() || undefined,
+        }),
+      });
+
+      // Refresh matches list and stats
+      const [matchesResponse, statsResponse] = await Promise.allSettled([
+        apiRequest<{ matches: Match[] }>(API_ENDPOINTS.adminAllMatches).catch(() => ({ matches: [] })),
+        apiRequest<AdminStats>(API_ENDPOINTS.adminStatistics),
+      ]);
+
+      if (matchesResponse.status === 'fulfilled') {
+        const matches = matchesResponse.value.matches || [];
+        setAllMatches(matches);
+        const pendingCount = matches.filter(m => m.status === 'pending').length;
+        const activeMatches = matches.filter(m => m.status === 'accepted');
+        const uniqueAlumniIds = new Set(activeMatches.map(m => m.alumni.id));
+        const activeAlumniCount = uniqueAlumniIds.size;
+        const activeMatchesNum = activeMatches.length;
+        const awaitingCount = matches.filter(m => m.status === 'confirmed').length;
+        setPendingMatchesCount(pendingCount);
+        setActiveMatchesCount(activeAlumniCount);
+        setActiveMatchesNumber(activeMatchesNum);
+        setAwaitingAlumniCount(awaitingCount);
+      }
+      if (statsResponse.status === 'fulfilled') {
+        setStats(statsResponse.value);
+      }
+
+      // Close modal and reset
+      setShowCreateMatchModal(false);
+      setSelectedStudentForMatch(null);
+      setSelectedAlumniForMatch(null);
+      setMatchCoverLetter('');
+      
+      // Navigate to matches view
+      setViewMode('matches');
+      setMatchSubFilter('awaitingAlumni');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to create match');
+    } finally {
+      setCreatingMatch(false);
     }
   };
 
@@ -2792,6 +2856,30 @@ export function AdminDashboard() {
                   </button>
                   <h2 style={{ fontSize: '1.5rem', fontWeight: 600 }}>Matches Management</h2>
                   </div>
+                  <button
+                    onClick={() => {
+                      setSelectedStudentForMatch(null);
+                      setSelectedAlumniForMatch(null);
+                      setMatchCoverLetter('');
+                      setShowCreateMatchModal(true);
+                    }}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      backgroundColor: '#C8102E',
+                      color: 'white',
+                      padding: '0.5rem 1rem',
+                      borderRadius: '0.5rem',
+                      border: 'none',
+                      cursor: 'pointer',
+                      fontWeight: 500,
+                      fontSize: '0.875rem'
+                    }}
+                  >
+                    <Plus size={16} />
+                    Create Match
+                  </button>
                 </div>
                 
                 {/* Category Tabs */}

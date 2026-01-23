@@ -35,6 +35,7 @@ export function MentorProfilePage() {
     currentPosition: '',
     skillsOffered: [] as string[],
     mentoringGoals: [] as string[],
+    mentoringTypes: [] as string[], // oneOff, vocational, employment
     about: '',
     location: '',
     linkedInUrl: '',
@@ -110,6 +111,7 @@ export function MentorProfilePage() {
           currentPosition: '',
           skillsOffered: [],
           mentoringGoals: [],
+          mentoringTypes: [],
           about: '',
           location: '',
           linkedInUrl: '',
@@ -236,6 +238,7 @@ export function MentorProfilePage() {
         currentPosition: formData.currentPosition || undefined,
         skillsOffered: formData.skillsOffered,
         mentoringGoals: formData.mentoringGoals,
+        mentoringTypes: formData.mentoringTypes,
         about: formData.about || undefined,
         location: formData.location || undefined,
         linkedInUrl: formData.linkedInUrl || undefined,
@@ -603,6 +606,118 @@ export function MentorProfilePage() {
                 ))}
               </div>
             )}
+          </div>
+
+          {/* Mentoring Types */}
+          <div style={{ marginBottom: '2rem' }}>
+            <h2 style={{ fontSize: '1.25rem', fontWeight: 600, marginBottom: '1rem' }}>Mentoring Types</h2>
+            <p style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '1rem' }}>
+              Select the types of mentoring you can provide (you can select multiple)
+            </p>
+            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer', padding: '0.75rem', border: '1px solid #e5e7eb', borderRadius: '0.5rem', transition: 'all 0.2s' }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor = '#C8102E';
+                  e.currentTarget.style.backgroundColor = '#fef2f2';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = '#e5e7eb';
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={formData.mentoringTypes.includes('oneOff')}
+                  onChange={(e) => {
+                    if (e.target.checked) {
+                      setFormData(prev => ({
+                        ...prev,
+                        mentoringTypes: [...prev.mentoringTypes, 'oneOff']
+                      }));
+                    } else {
+                      setFormData(prev => ({
+                        ...prev,
+                        mentoringTypes: prev.mentoringTypes.filter(t => t !== 'oneOff')
+                      }));
+                    }
+                  }}
+                  style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                />
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: 600, marginBottom: '0.25rem' }}>One-Off Advice</div>
+                  <div style={{ fontSize: '0.875rem', color: '#6b7280' }}>Quick support via phone, email, or a single meeting for CV tips, interview prep, and industry insights</div>
+                </div>
+              </label>
+
+              <label style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer', padding: '0.75rem', border: '1px solid #e5e7eb', borderRadius: '0.5rem', transition: 'all 0.2s' }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor = '#C8102E';
+                  e.currentTarget.style.backgroundColor = '#fef2f2';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = '#e5e7eb';
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={formData.mentoringTypes.includes('vocational')}
+                  onChange={(e) => {
+                    if (e.target.checked) {
+                      setFormData(prev => ({
+                        ...prev,
+                        mentoringTypes: [...prev.mentoringTypes, 'vocational']
+                      }));
+                    } else {
+                      setFormData(prev => ({
+                        ...prev,
+                        mentoringTypes: prev.mentoringTypes.filter(t => t !== 'vocational')
+                      }));
+                    }
+                  }}
+                  style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                />
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: 600, marginBottom: '0.25rem' }}>Vocational Mentoring</div>
+                  <div style={{ fontSize: '0.875rem', color: '#6b7280' }}>2-3 sessions with deeper guidance on industry expectations, goal setting, and career planning</div>
+                </div>
+              </label>
+
+              <label style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer', padding: '0.75rem', border: '1px solid #e5e7eb', borderRadius: '0.5rem', transition: 'all 0.2s' }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor = '#C8102E';
+                  e.currentTarget.style.backgroundColor = '#fef2f2';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = '#e5e7eb';
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={formData.mentoringTypes.includes('employment')}
+                  onChange={(e) => {
+                    if (e.target.checked) {
+                      setFormData(prev => ({
+                        ...prev,
+                        mentoringTypes: [...prev.mentoringTypes, 'employment']
+                      }));
+                    } else {
+                      setFormData(prev => ({
+                        ...prev,
+                        mentoringTypes: prev.mentoringTypes.filter(t => t !== 'employment')
+                      }));
+                    }
+                  }}
+                  style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                />
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: 600, marginBottom: '0.25rem' }}>Employment Opportunities</div>
+                  <div style={{ fontSize: '0.875rem', color: '#6b7280' }}>Access workplace visits, internship opportunities, and work experience placements</div>
+                </div>
+              </label>
+            </div>
           </div>
 
           {/* About Section */}

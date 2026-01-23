@@ -777,4 +777,108 @@ router.get(
   }
 );
 
+/**
+ * POST /matches/create
+ * 
+ * Admin manually creates a match between a student and an alumni.
+ * This allows admin to proactively connect students with alumni.
+ * 
+ * Requires authentication and admin role.
+ */
+router.post(
+  "/matches/create",
+  authenticate,
+  requireAdmin,
+  async (req: AuthRequest, res: Response): Promise<Response | void> => {
+    try {
+      const { studentId, alumniId, coverLetter } = req.body as {
+        studentId?: number;
+        alumniId?: number;
+        coverLetter?: string;
+      };
+
+      // Validate input
+      if (!studentId || !alumniId) {
+        return res.status(400).json({ error: "Student ID and Alumni ID are required" });
+      }
+
+      // Verify student exists and is approved
+      const student = await prisma.user.findUnique({
+        where: { id: studentId },
+        select: { id: true, role: true, approvalStatus: true },
+      });
+
+      if (!student || student.role !== "student") {
+        return res.status(400).json({ error: "Invalid student ID" });
+      }
+
+      if (student.approvalStatus !== "approved") {
+        return res.status(400).json({ error: "Student must be approved before matching" });
+      }
+
+      // Verify alumni exists and is approved
+      const alumni = await prisma.user.findUnique({
+        where: { id: alumniId },
+        select: { id: true, role: true, approvalStatus: true },
+      });
+
+      if (!alumni || alumni.role !== "alumni") {
+        return res.status(400).json({ error: "Invalid alumni ID" });
+      }
+
+      if (alumni.approvalStatus !== "approved") {
+        return res.status(400).json({ error: "Alumni must be approved before matching" });
+      }
+
+      // Check if match already exists
+      const existingMatch = await prisma.match.findUnique({
+        where: {
+          studentId_alumniId: {
+            studentId,
+            alumniId,
+          },
+        },
+      });
+
+      if (existingMatch) {
+        return res.status(400).json({ error: "Match already exists between this student and alumni" });
+      }
+
+      // Get admin user ID
+      if (!req.userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      // Create match with "confirmed" status (admin approved, waiting for alumni)
+      const match = await prisma.match.create({
+        data: {
+          studentId,
+          alumniId,
+          status: "confirmed",
+          coverLetter: coverLetter || null,
+          confirmedById: req.userId,
+          confirmedAt: new Date(),
+          matchReasons: ["Admin manually created this match"],
+        },
+        include: {
+          student: {
+            select: { id: true, name: true, email: true },
+          },
+          alumni: {
+            select: { id: true, name: true, email: true },
+          },
+        },
+      });
+
+      return res.status(201).json({
+        message: "Match created successfully",
+        match,
+      });
+    } catch (error) {
+      console.error("Error creating match:", error);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  }
+);
+
 export default router;

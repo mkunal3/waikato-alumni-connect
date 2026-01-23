@@ -371,6 +371,7 @@ export function StudentRegisterPage() {
                 {/* Password Requirements Popup */}
                 {showPasswordRequirements && (() => {
                   const hasUppercase = /[A-Z]/.test(formData.password);
+                  const hasNumber = /[0-9]/.test(formData.password);
                   const hasSpecialChar = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(formData.password);
                   const hasInvalidChar = /[\s<>]/.test(formData.password);
                   
@@ -435,6 +436,32 @@ export function StudentRegisterPage() {
                           </span>
                           <span style={{ fontSize: '14px', color: hasUppercase ? '#10B981' : '#6B7280' }}>
                             At least one uppercase letter
+                          </span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span style={{ 
+                            display: 'inline-block',
+                            width: '18px',
+                            height: '18px',
+                            borderRadius: '50%',
+                            border: `2px solid ${hasNumber ? '#10B981' : '#D1D5DB'}`,
+                            backgroundColor: hasNumber ? '#10B981' : 'transparent',
+                            position: 'relative'
+                          }}>
+                            {hasNumber && (
+                              <span style={{
+                                position: 'absolute',
+                                top: '50%',
+                                left: '50%',
+                                transform: 'translate(-50%, -50%)',
+                                color: 'white',
+                                fontSize: '12px',
+                                fontWeight: 'bold'
+                              }}>✓</span>
+                            )}
+                          </span>
+                          <span style={{ fontSize: '14px', color: hasNumber ? '#10B981' : '#6B7280' }}>
+                            At least one number
                           </span>
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>

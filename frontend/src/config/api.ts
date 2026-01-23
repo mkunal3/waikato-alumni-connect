@@ -108,12 +108,6 @@ export async function apiRequest<T>(
     });
 
     if (!response.ok) {
-      // Handle 401 Unauthorized (token expired)
-      if (response.status === 401) {
-        handleUnauthorized();
-        throw new Error('Your session has expired. Please log in again.');
-      }
-      
       let errorData;
       try {
         errorData = await response.json();
@@ -121,6 +115,21 @@ export async function apiRequest<T>(
         errorData = { error: `HTTP error! status: ${response.status}` };
       }
       const errorMessage = errorData.error || errorData.message || `HTTP error! status: ${response.status}`;
+      
+      // Handle 401 Unauthorized
+      if (response.status === 401) {
+        // For login endpoint, show the actual error message (e.g., "Invalid email or password")
+        // For other endpoints, it's a session expiration
+        if (endpoint === API_ENDPOINTS.login) {
+          console.error(`API Error [${endpoint}]:`, { status: response.status, errorData, errorMessage });
+          throw new Error(errorMessage);
+        } else {
+          // Token expired for authenticated endpoints
+          handleUnauthorized();
+          throw new Error('Your session has expired. Please log in again.');
+        }
+      }
+      
       console.error(`API Error [${endpoint}]:`, { status: response.status, errorData, errorMessage });
       throw new Error(errorMessage);
     }
@@ -135,12 +144,6 @@ export async function apiRequest<T>(
     });
 
     if (!response.ok) {
-      // Handle 401 Unauthorized (token expired)
-      if (response.status === 401) {
-        handleUnauthorized();
-        throw new Error('Your session has expired. Please log in again.');
-      }
-      
       let errorData;
       try {
         errorData = await response.json();
@@ -148,6 +151,21 @@ export async function apiRequest<T>(
         errorData = { error: `HTTP error! status: ${response.status}` };
       }
       const errorMessage = errorData.error || errorData.message || `HTTP error! status: ${response.status}`;
+      
+      // Handle 401 Unauthorized
+      if (response.status === 401) {
+        // For login endpoint, show the actual error message (e.g., "Invalid email or password")
+        // For other endpoints, it's a session expiration
+        if (endpoint === API_ENDPOINTS.login) {
+          console.error(`API Error [${endpoint}]:`, { status: response.status, errorData, errorMessage });
+          throw new Error(errorMessage);
+        } else {
+          // Token expired for authenticated endpoints
+          handleUnauthorized();
+          throw new Error('Your session has expired. Please log in again.');
+        }
+      }
+      
       console.error(`API Error [${endpoint}]:`, { status: response.status, errorData, errorMessage });
       throw new Error(errorMessage);
     }

@@ -1047,7 +1047,7 @@ export function MentorDashboard() {
                 {viewMode === 'list' && (
                   <div style={{ backgroundColor: 'white', borderRadius: '0.75rem', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', border: '1px solid #e5e7eb', padding: '1.5rem' }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
-                    <h2 ref={myMenteesSectionRef} style={{ fontSize: '1.25rem', fontWeight: 600 }}>My Mentees</h2>
+                    <h2 style={{ fontSize: '1.25rem', fontWeight: 600 }}>My Mentees</h2>
                     <span style={{ backgroundColor: '#f3f4f6', color: '#374151', padding: '0.25rem 0.75rem', borderRadius: '9999px', fontSize: '0.875rem', fontWeight: 500 }}>
                       {currentMentees.length} Active
                     </span>

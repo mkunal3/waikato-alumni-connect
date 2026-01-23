@@ -140,7 +140,8 @@ export function AdminDashboard() {
   const [pendingStudents, setPendingStudents] = useState<Student[]>([]);
   const [allMatches, setAllMatches] = useState<Match[]>([]);
   const [pendingMatchesCount, setPendingMatchesCount] = useState<number>(0);
-  const [activeMatchesCount, setActiveMatchesCount] = useState<number>(0);
+  const [activeMatchesCount, setActiveMatchesCount] = useState<number>(0); // Unique alumni in active matches (for Alumni card)
+  const [activeMatchesNumber, setActiveMatchesNumber] = useState<number>(0); // Total active matches count (for Matches card)
   const [awaitingAlumniCount, setAwaitingAlumniCount] = useState<number>(0);
   const [matchFilter, setMatchFilter] = useState<'all' | 'pending' | 'active'>('all');
   const [coverLetterExpanded, setCoverLetterExpanded] = useState<boolean>(false);
@@ -253,13 +254,16 @@ export function AdminDashboard() {
           const matches = (matchesResponse.value as { matches: Match[] }).matches || [];
           setAllMatches(matches);
           const pendingCount = matches.filter(m => m.status === 'pending').length;
-          // Count unique alumni in active matches, not the number of matches
+          // Count unique alumni in active matches (for Alumni card)
           const activeMatches = matches.filter(m => m.status === 'accepted');
           const uniqueAlumniIds = new Set(activeMatches.map(m => m.alumni.id));
-          const activeCount = uniqueAlumniIds.size;
+          const activeAlumniCount = uniqueAlumniIds.size;
+          // Count total active matches (for Matches card)
+          const activeMatchesNum = activeMatches.length;
           const awaitingCount = matches.filter(m => m.status === 'confirmed').length;
           setPendingMatchesCount(pendingCount);
-          setActiveMatchesCount(activeCount);
+          setActiveMatchesCount(activeAlumniCount);
+          setActiveMatchesNumber(activeMatchesNum);
           setAwaitingAlumniCount(awaitingCount);
         } else {
           // Handle matches loading errors - log for debugging but don't show error banner
@@ -274,6 +278,7 @@ export function AdminDashboard() {
           setAllMatches([]);
           setPendingMatchesCount(0);
           setActiveMatchesCount(0);
+          setActiveMatchesNumber(0);
           setAwaitingAlumniCount(0);
         }
 
@@ -419,13 +424,16 @@ export function AdminDashboard() {
       const matches = response.matches || [];
       setAllMatches(matches);
       const pendingCount = matches.filter(m => m.status === 'pending').length;
-      // Count unique alumni in active matches, not the number of matches
+      // Count unique alumni in active matches (for Alumni card)
       const activeMatches = matches.filter(m => m.status === 'accepted');
       const uniqueAlumniIds = new Set(activeMatches.map(m => m.alumni.id));
-      const activeCount = uniqueAlumniIds.size;
+      const activeAlumniCount = uniqueAlumniIds.size;
+      // Count total active matches (for Matches card)
+      const activeMatchesNum = activeMatches.length;
       const awaitingCount = matches.filter(m => m.status === 'confirmed').length;
       setPendingMatchesCount(pendingCount);
-      setActiveMatchesCount(activeCount);
+      setActiveMatchesCount(activeAlumniCount);
+      setActiveMatchesNumber(activeMatchesNum);
       setAwaitingAlumniCount(awaitingCount);
       setMatchFilter(filter);
       setViewMode('matches');
@@ -477,13 +485,16 @@ export function AdminDashboard() {
         const matches = matchesResponse.value.matches || [];
         setAllMatches(matches);
         const pendingCount = matches.filter(m => m.status === 'pending').length;
-        // Count unique alumni in active matches, not the number of matches
+        // Count unique alumni in active matches (for Alumni card)
         const activeMatches = matches.filter(m => m.status === 'accepted');
         const uniqueAlumniIds = new Set(activeMatches.map(m => m.alumni.id));
-        const activeCount = uniqueAlumniIds.size;
+        const activeAlumniCount = uniqueAlumniIds.size;
+        // Count total active matches (for Matches card)
+        const activeMatchesNum = activeMatches.length;
         const awaitingCount = matches.filter(m => m.status === 'confirmed').length;
         setPendingMatchesCount(pendingCount);
-        setActiveMatchesCount(activeCount);
+        setActiveMatchesCount(activeAlumniCount);
+        setActiveMatchesNumber(activeMatchesNum);
         setAwaitingAlumniCount(awaitingCount);
         // Update selected match if viewing detail
         if (viewMode === 'matchDetail' && selectedMatch && selectedMatch.id === matchId) {
@@ -532,13 +543,16 @@ export function AdminDashboard() {
         const matches = matchesResponse.value.matches || [];
         setAllMatches(matches);
         const pendingCount = matches.filter(m => m.status === 'pending').length;
-        // Count unique alumni in active matches, not the number of matches
+        // Count unique alumni in active matches (for Alumni card)
         const activeMatches = matches.filter(m => m.status === 'accepted');
         const uniqueAlumniIds = new Set(activeMatches.map(m => m.alumni.id));
-        const activeCount = uniqueAlumniIds.size;
+        const activeAlumniCount = uniqueAlumniIds.size;
+        // Count total active matches (for Matches card)
+        const activeMatchesNum = activeMatches.length;
         const awaitingCount = matches.filter(m => m.status === 'confirmed').length;
         setPendingMatchesCount(pendingCount);
-        setActiveMatchesCount(activeCount);
+        setActiveMatchesCount(activeAlumniCount);
+        setActiveMatchesNumber(activeMatchesNum);
         setAwaitingAlumniCount(awaitingCount);
         // If viewing detail of rejected match, go back to list (preserve current filter)
         if (viewMode === 'matchDetail' && selectedMatch && selectedMatch.id === matchId) {
@@ -1058,7 +1072,7 @@ export function AdminDashboard() {
                     </div>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem', alignItems: 'end' }}>
                       <div style={{ display: 'flex', flexDirection: 'column' }}>
-                        <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#16a34a', marginBottom: '0.5rem' }}>{activeMatchesCount}</div>
+                        <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#16a34a', marginBottom: '0.5rem' }}>{activeMatchesNumber}</div>
                         <div style={{ fontSize: '0.875rem', color: '#6b7280' }}>Active</div>
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column' }}>

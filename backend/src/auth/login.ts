@@ -31,11 +31,24 @@ router.post(
           .json({ error: "Invalid email or password" });
       }
 
+      // Defensive check: avoid returning 500 if stored hash is missing/invalid
+      // Treat as invalid credentials instead.
+      if (!user.passwordHash || typeof user.passwordHash !== "string") {
+        return res
+          .status(401)
+          .json({ error: "Invalid email or password" });
+      }
+
       // 3) Compare password
-      const passwordValid = await bcrypt.compare(
-        password,
-        user.passwordHash
-      );
+      let passwordValid = false;
+      try {
+        passwordValid = await bcrypt.compare(password, user.passwordHash);
+      } catch (compareError) {
+        console.error("Password compare error:", compareError);
+        return res
+          .status(401)
+          .json({ error: "Invalid email or password" });
+      }
       if (!passwordValid) {
         return res
           .status(401)

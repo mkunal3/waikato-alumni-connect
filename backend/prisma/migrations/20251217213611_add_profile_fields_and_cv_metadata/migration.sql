@@ -1,6 +1,7 @@
 -- AlterTable
-ALTER TABLE "User" ADD COLUMN     "academicFocus" TEXT,
-ADD COLUMN     "cvFileName" TEXT,
-ADD COLUMN     "cvFilePath" TEXT,
-ADD COLUMN     "cvUploadedAt" TIMESTAMP(3),
-ADD COLUMN     "expectedGraduation" TEXT;
+ALTER TABLE "User"
+  ADD COLUMN IF NOT EXISTS "academicFocus" TEXT,
+  ADD COLUMN IF NOT EXISTS "cvFileName" TEXT,
+  ADD COLUMN IF NOT EXISTS "cvFilePath" TEXT,
+  ADD COLUMN IF NOT EXISTS "cvUploadedAt" TIMESTAMP(3),
+  ADD COLUMN IF NOT EXISTS "expectedGraduation" TEXT;

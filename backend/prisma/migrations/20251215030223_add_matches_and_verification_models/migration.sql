@@ -1,13 +1,14 @@
 -- AlterTable
-ALTER TABLE "User" ADD COLUMN     "currentCompany" TEXT,
-ADD COLUMN     "currentPosition" TEXT,
-ADD COLUMN     "degree" TEXT,
-ADD COLUMN     "graduationYear" INTEGER,
-ADD COLUMN     "mentoringGoals" TEXT[],
-ADD COLUMN     "skillsOffered" TEXT[],
-ADD COLUMN     "skillsWanted" TEXT[],
-ADD COLUMN     "studentId" TEXT,
-ADD COLUMN     "yearOfStudy" INTEGER;
+ALTER TABLE "User"
+  ADD COLUMN IF NOT EXISTS "currentCompany" TEXT,
+  ADD COLUMN IF NOT EXISTS "currentPosition" TEXT,
+  ADD COLUMN IF NOT EXISTS "degree" TEXT,
+  ADD COLUMN IF NOT EXISTS "graduationYear" INTEGER,
+  ADD COLUMN IF NOT EXISTS "mentoringGoals" TEXT[],
+  ADD COLUMN IF NOT EXISTS "skillsOffered" TEXT[],
+  ADD COLUMN IF NOT EXISTS "skillsWanted" TEXT[],
+  ADD COLUMN IF NOT EXISTS "studentId" TEXT,
+  ADD COLUMN IF NOT EXISTS "yearOfStudy" INTEGER;
 
 -- CreateTable
 CREATE TABLE "Match" (
@@ -17,6 +18,7 @@ CREATE TABLE "Match" (
     "status" TEXT NOT NULL DEFAULT 'pending',
     "matchScore" DOUBLE PRECISION,
     "matchReasons" TEXT[],
+    "coverLetter" TEXT,
     "confirmedById" INTEGER,
     "confirmedAt" TIMESTAMP(3),
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,

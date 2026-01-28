@@ -5,5 +5,6 @@
 
 */
 -- AlterTable
-ALTER TABLE "User" ADD COLUMN     "approvalStatus" TEXT NOT NULL DEFAULT 'pending',
-ADD COLUMN     "passwordHash" TEXT NOT NULL;
+ALTER TABLE "User"
+  ADD COLUMN IF NOT EXISTS "approvalStatus" TEXT NOT NULL DEFAULT 'pending',
+  ADD COLUMN IF NOT EXISTS "passwordHash" TEXT NOT NULL;

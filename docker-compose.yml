@@ -1,40 +1,47 @@
 services:
-  waikato-connect:
-    container_name: waikato-connect
-    
-    # Build from Dockerfile in backend directory
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    
+  connect-postgres:
+    container_name: connect-postgres
+    image: postgres
     restart: unless-stopped
-
-    # Must be on proxy-net for external access
+    environment:
+      - POSTGRES_USER=waiconnect
+      - POSTGRES_PASSWORD=waiconnect
+    ports:
+      - "5432:5432"
     networks:
       - proxy-net
 
-    # Domain lookup configuration
-    # Replace 'waikato-connect' with your desired subdomain
+  waikato-connect:
+    container_name: waikato-connect
+    
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+
+    depends_on:
+      connect-postgres:
+        condition: service_started
+        restart: true
+
+    restart: unless-stopped
+
+    networks:
+      - proxy-net
+
     extra_hosts:
       - "waikato-connect.trex-sandwich.com:127.0.0.1"
 
-    # Environment variables
     environment:
       - NODE_PORT=4000
       - NODE_HOST=waikato-connect.trex-sandwich.com
       - NODE_ENV=production
       - PORT=4000
-      # DATABASE_URL will be provided/configured by teacher from sandwich.com
-      # Format: postgresql://username:password@host:5432/database
-      # JWT_SECRET will be set by teacher
-      # FRONTEND_URL will be set after frontend deployment
+      - JWT_SECRET=....
+      - DATABASE_URL=postgresql://waiconnect:waiconnect@connect-postgres:5432/waiconnect
 
-    # Port mapping
     ports:
       - "4000:4000"
 
-    # Caddy reverse proxy labels
-    # Replace 'waikato-connect' with your desired subdomain
     labels:
       - "caddy=waikato-connect.trex-sandwich.com"
       - "caddy.reverse_proxy={{upstreams 4000}}"

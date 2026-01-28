@@ -24,7 +24,21 @@ router.post(
       }
 
       // 2) Find user by email
-      const user = await prisma.user.findUnique({ where: { email } });
+      // IMPORTANT:
+      // Use an explicit `select` to avoid Prisma querying columns that may not
+      // exist yet in environments where migrations haven't been applied.
+      const user = await prisma.user.findUnique({
+        where: { email },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          role: true,
+          approvalStatus: true,
+          createdAt: true,
+          passwordHash: true,
+        },
+      });
       if (!user) {
         return res
           .status(401)

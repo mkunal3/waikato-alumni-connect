@@ -70,7 +70,7 @@ services:
 
     labels:
       - "caddy=waikato-connect-frontend.trex-sandwich.com"
-      - "caddy.reverse_proxy={{upstreams 3000}}"
+      - "caddy.reverse_proxy={{upstreams 80}}"
 
 networks:
   proxy-net:

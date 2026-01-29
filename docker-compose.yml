@@ -48,6 +48,30 @@ services:
 
     tty: true
 
+  waikato-connect-frontend:
+    container_name: waikato-connect-frontend
+    
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_BASE_URL: https://waikato-connect.trex-sandwich.com
+
+    restart: unless-stopped
+
+    networks:
+      - proxy-net
+
+    extra_hosts:
+      - "waikato-connect-frontend.trex-sandwich.com:127.0.0.1"
+
+    ports:
+      - "3000:80"
+
+    labels:
+      - "caddy=waikato-connect-frontend.trex-sandwich.com"
+      - "caddy.reverse_proxy={{upstreams 3000}}"
+
 networks:
   proxy-net:
     external: true

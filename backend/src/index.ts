@@ -15,6 +15,7 @@ import mentorRouter from "./routes/mentor";
 import messageRouter from "./routes/message";
 import getVerificationCodeRouter from "./routes/getVerificationCode";
 import getLatestVerificationCodeRouter from "./routes/getLatestVerificationCode";
+import setupAdminRouter from "./routes/setupAdmin";
 import prisma from "./prisma";
 
 const app = express();
@@ -55,6 +56,7 @@ app.use("/mentor", mentorRouter);
 app.use("/message", messageRouter);
 app.use("/get-verification-code", getVerificationCodeRouter);
 app.use("/get-latest-verification-code", getLatestVerificationCodeRouter);
+app.use("/", setupAdminRouter);
 
 // Health check
 app.get("/", (_req: Request, res: Response) => {

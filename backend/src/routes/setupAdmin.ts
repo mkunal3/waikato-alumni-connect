@@ -33,6 +33,7 @@ async function ensureAdmin(_req: Request, res: Response): Promise<Response | voi
           skillsOffered: [],
           skillsWanted: [],
           interests: [],
+          languages: [],
           mentoringTypes: [],
         },
       });

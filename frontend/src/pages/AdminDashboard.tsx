@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { apiRequest, API_BASE_URL } from '../config/api';
 import { API_ENDPOINTS } from '../config/api';
 import { 
-  Users, GraduationCap, Award, Clock, CheckCircle, XCircle, LogOut,
-  Target, Mail, FileText, ArrowLeft, Key, Copy, Plus, ChevronDown, ChevronUp, AlertCircle, Bell
+  GraduationCap, Award, CheckCircle, XCircle, LogOut,
+  Target, FileText, ArrowLeft, Key, Copy, Plus, ChevronDown, AlertCircle
 } from 'lucide-react';
 
 const waikatoLogo = '/waikato-logo.png';
@@ -134,7 +134,6 @@ export function AdminDashboard() {
     pendingStudents: 0,
     totalMatches: 0,
   });
-  const [pendingAlumni, setPendingAlumni] = useState<PendingUser[]>([]);
   const [allStudents, setAllStudents] = useState<Student[]>([]);
   const [allAlumni, setAllAlumni] = useState<Alumni[]>([]);
   const [pendingStudents, setPendingStudents] = useState<Student[]>([]);
@@ -143,12 +142,6 @@ export function AdminDashboard() {
   const [activeMatchesCount, setActiveMatchesCount] = useState<number>(0); // Unique alumni in active matches (for Alumni card)
   const [activeMatchesNumber, setActiveMatchesNumber] = useState<number>(0); // Total active matches count (for Matches card)
   const [awaitingAlumniCount, setAwaitingAlumniCount] = useState<number>(0);
-  const [matchFilter, setMatchFilter] = useState<'all' | 'pending' | 'active'>('all');
-  const [coverLetterExpanded, setCoverLetterExpanded] = useState<boolean>(false);
-  const [studentFilter, setStudentFilter] = useState<'all' | 'approved' | 'pending'>('all');
-  const [studentSortBy, setStudentSortBy] = useState<'name' | 'createdAt'>('name');
-  const [alumniFilter, setAlumniFilter] = useState<'all' | 'matched' | 'awaitingResponse' | 'unmatched'>('all');
-  const [alumniSortBy, setAlumniSortBy] = useState<'name' | 'createdAt'>('name');
   const [viewMode, setViewMode] = useState<'overview' | 'students' | 'studentDetail' | 'alumni' | 'alumniDetail' | 'matches' | 'matchDetail' | 'pending' | 'pendingDetail'>(initialViewMode);
   const [studentSubFilter, setStudentSubFilter] = useState<'all' | 'approved' | 'pending'>('all');
   const [alumniSubFilter, setAlumniSubFilter] = useState<'all' | 'matched' | 'unmatched' | 'awaitingResponse'>('all');
@@ -244,14 +237,10 @@ export function AdminDashboard() {
         if (alumniResponse.status === 'fulfilled') {
           if (shouldLoadAlumni) {
             setAllAlumni((alumniResponse.value as { mentors: Alumni[] }).mentors || []);
-          } else {
-            setPendingAlumni((alumniResponse.value as { mentors: PendingUser[] }).mentors || []);
           }
         } else {
           if (shouldLoadAlumni) {
             setAllAlumni([]);
-          } else {
-            setPendingAlumni([]);
           }
         }
 
@@ -333,13 +322,8 @@ export function AdminDashboard() {
     setSelectedStudent(null);
     setSelectedAlumni(null);
     setSelectedMatch(null);
-    setMatchFilter('all');
-    setStudentFilter('all');
     setStudentSubFilter('all');
-    setStudentSortBy('name');
-    setAlumniFilter('all');
     setAlumniSubFilter('all');
-    setAlumniSortBy('name');
     setMatchSubFilter('all');
   };
 
@@ -440,7 +424,7 @@ export function AdminDashboard() {
       setActiveMatchesCount(activeAlumniCount);
       setActiveMatchesNumber(activeMatchesNum);
       setAwaitingAlumniCount(awaitingCount);
-      setMatchFilter(filter);
+      setMatchSubFilter(filter);
       setViewMode('matches');
     } catch (err) {
       console.error('Failed to load all matches:', err);
@@ -468,7 +452,6 @@ export function AdminDashboard() {
   const handleViewMatchDetail = (match: Match) => {
     setSelectedMatch(match);
     setViewMode('matchDetail');
-    setCoverLetterExpanded(false);
   };
 
   const handleApproveMatch = async (matchId: number) => {
@@ -673,9 +656,6 @@ export function AdminDashboard() {
           }
         }
       }
-      if (alumniResponse.status === 'fulfilled') {
-        setPendingAlumni(alumniResponse.value.mentors || []);
-      }
       if (statsResponse.status === 'fulfilled') {
         setStats(statsResponse.value);
       }
@@ -777,9 +757,6 @@ export function AdminDashboard() {
             setSelectedStudent(null);
           }
         }
-      }
-      if (alumniResponse.status === 'fulfilled') {
-        setPendingAlumni(alumniResponse.value.mentors || []);
       }
       if (statsResponse.status === 'fulfilled') {
         setStats(statsResponse.value);
@@ -2572,7 +2549,7 @@ export function AdminDashboard() {
               <div style={{ backgroundColor: 'white', borderRadius: '0.75rem', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', border: '1px solid #e5e7eb', padding: '1.5rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem' }}>
                   <button
-                    onClick={handleBackToStats}
+                    onClick={() => setViewMode('overview')}
                     style={{
                       display: 'flex',
                       alignItems: 'center',
@@ -4474,6 +4451,226 @@ export function AdminDashboard() {
               lineHeight: '1.6'
             }}>
               {selectedMatch.coverLetter}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Create Match Modal */}
+      {showCreateMatchModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }}>
+          <div style={{
+            backgroundColor: 'white',
+            borderRadius: '0.75rem',
+            boxShadow: '0 10px 25px rgba(0,0,0,0.2)',
+            padding: '2rem',
+            maxWidth: '500px',
+            width: '90%',
+            maxHeight: '90vh',
+            overflow: 'auto'
+          }}>
+            <h3 style={{ fontSize: '1.25rem', fontWeight: 600, marginBottom: '1rem' }}>
+              Create Manual Match
+            </h3>
+            <p style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '1.5rem' }}>
+              Manually connect a student with an alumni mentor. The match will be created in "confirmed" status.
+            </p>
+
+            {error && (
+              <div style={{
+                backgroundColor: '#fee2e2',
+                border: '1px solid #fecaca',
+                borderRadius: '0.5rem',
+                padding: '0.75rem',
+                marginBottom: '1rem',
+                fontSize: '0.875rem',
+                color: '#dc2626'
+              }}>
+                {error}
+              </div>
+            )}
+
+            {/* Student Dropdown */}
+            <div style={{ marginBottom: '1.5rem' }}>
+              <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 500, marginBottom: '0.5rem', color: '#374151' }}>
+                Student <span style={{ color: '#dc2626' }}>*</span>
+              </label>
+              <select
+                value={selectedStudentForMatch?.id || ''}
+                onChange={(e) => {
+                  const studentId = parseInt(e.target.value, 10);
+                  const student = allStudents.find(u => u.id === studentId);
+                  setSelectedStudentForMatch(student || null);
+                }}
+                style={{
+                  width: '100%',
+                  padding: '0.75rem',
+                  border: '1px solid #d1d5db',
+                  borderRadius: '0.5rem',
+                  fontSize: '0.875rem',
+                  fontFamily: 'inherit',
+                  outline: 'none',
+                  transition: 'border-color 0.2s',
+                  backgroundColor: 'white',
+                  cursor: 'pointer'
+                }}
+                onFocus={(e) => {
+                  e.currentTarget.style.borderColor = '#C8102E';
+                }}
+                onBlur={(e) => {
+                  e.currentTarget.style.borderColor = '#d1d5db';
+                }}
+              >
+                <option value="">Select a student...</option>
+                {allStudents
+                  .filter((u: Student) => u.approvalStatus === 'approved')
+                  .sort((a: Student, b: Student) => a.name.localeCompare(b.name))
+                  .map((student: Student) => (
+                    <option key={student.id} value={student.id}>
+                      {student.name} ({student.email})
+                    </option>
+                  ))}
+              </select>
+            </div>
+
+            {/* Alumni Dropdown */}
+            <div style={{ marginBottom: '1.5rem' }}>
+              <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 500, marginBottom: '0.5rem', color: '#374151' }}>
+                Alumni <span style={{ color: '#dc2626' }}>*</span>
+              </label>
+              <select
+                value={selectedAlumniForMatch?.id || ''}
+                onChange={(e) => {
+                  const alumniId = parseInt(e.target.value, 10);
+                  const alumni = allAlumni.find(u => u.id === alumniId);
+                  setSelectedAlumniForMatch(alumni || null);
+                }}
+                style={{
+                  width: '100%',
+                  padding: '0.75rem',
+                  border: '1px solid #d1d5db',
+                  borderRadius: '0.5rem',
+                  fontSize: '0.875rem',
+                  fontFamily: 'inherit',
+                  outline: 'none',
+                  transition: 'border-color 0.2s',
+                  backgroundColor: 'white',
+                  cursor: 'pointer'
+                }}
+                onFocus={(e) => {
+                  e.currentTarget.style.borderColor = '#C8102E';
+                }}
+                onBlur={(e) => {
+                  e.currentTarget.style.borderColor = '#d1d5db';
+                }}
+              >
+                <option value="">Select an alumni...</option>
+                {allAlumni
+                  .filter((u: Alumni) => u.approvalStatus === 'approved')
+                  .sort((a: Alumni, b: Alumni) => a.name.localeCompare(b.name))
+                  .map((alumni: Alumni) => (
+                    <option key={alumni.id} value={alumni.id}>
+                      {alumni.name} ({alumni.email})
+                    </option>
+                  ))}
+              </select>
+            </div>
+
+            {/* Match Notes Textarea */}
+            <div style={{ marginBottom: '1.5rem' }}>
+              <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 500, marginBottom: '0.5rem', color: '#374151' }}>
+                Match Notes (Optional)
+              </label>
+              <textarea
+                value={matchCoverLetter}
+                onChange={(e) => setMatchCoverLetter(e.target.value)}
+                placeholder="Add optional notes about why this match was created..."
+                rows={4}
+                style={{
+                  width: '100%',
+                  padding: '0.75rem',
+                  border: '1px solid #d1d5db',
+                  borderRadius: '0.5rem',
+                  fontSize: '0.875rem',
+                  fontFamily: 'inherit',
+                  outline: 'none',
+                  transition: 'border-color 0.2s',
+                  resize: 'vertical'
+                }}
+                onFocus={(e) => {
+                  e.currentTarget.style.borderColor = '#C8102E';
+                }}
+                onBlur={(e) => {
+                  e.currentTarget.style.borderColor = '#d1d5db';
+                }}
+              />
+            </div>
+
+            {/* Action Buttons */}
+            <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => {
+                  setShowCreateMatchModal(false);
+                  setSelectedStudentForMatch(null);
+                  setSelectedAlumniForMatch(null);
+                  setMatchCoverLetter('');
+                  setError(null);
+                }}
+                disabled={creatingMatch}
+                style={{
+                  border: '1px solid #d1d5db',
+                  color: '#374151',
+                  padding: '0.5rem 1rem',
+                  borderRadius: '0.5rem',
+                  cursor: creatingMatch ? 'not-allowed' : 'pointer',
+                  backgroundColor: 'white',
+                  fontSize: '0.875rem',
+                  fontWeight: 500,
+                  opacity: creatingMatch ? 0.6 : 1
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => handleCreateMatch()}
+                disabled={creatingMatch || !selectedStudentForMatch || !selectedAlumniForMatch}
+                style={{
+                  backgroundColor: creatingMatch || !selectedStudentForMatch || !selectedAlumniForMatch ? '#9ca3af' : '#C8102E',
+                  color: 'white',
+                  padding: '0.5rem 1rem',
+                  borderRadius: '0.5rem',
+                  cursor: creatingMatch || !selectedStudentForMatch || !selectedAlumniForMatch ? 'not-allowed' : 'pointer',
+                  border: 'none',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  fontSize: '0.875rem',
+                  fontWeight: 500
+                }}
+              >
+                {creatingMatch ? (
+                  <>
+                    <div style={{ width: '16px', height: '16px', border: '2px solid white', borderTop: '2px solid transparent', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+                    Creating...
+                  </>
+                ) : (
+                  <>
+                    <Plus size={16} />
+                    Create Match
+                  </>
+                )}
+              </button>
             </div>
           </div>
         </div>

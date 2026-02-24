@@ -11,6 +11,9 @@ export interface User {
   createdAt: string;
   passwordUpdatedAt?: string | null;
   profilePhotoFilePath?: string | null;
+  isActive?: boolean;
+  deactivatedAt?: string | null;
+  deactivationReason?: string | null;
 }
 
 export interface LoginRequest {

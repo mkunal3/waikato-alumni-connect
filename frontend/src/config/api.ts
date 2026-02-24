@@ -64,6 +64,8 @@ export const API_ENDPOINTS = {
   adminListAdmins: '/admin/admins',
   adminDeactivateAdmin: (adminId: number) => `/admin/admins/${adminId}/deactivate`,
   adminReactivateAdmin: (adminId: number) => `/admin/admins/${adminId}/reactivate`,
+  adminDeactivateUser: (userId: number) => `/admin/users/${userId}/deactivate`,
+  adminReactivateUser: (userId: number) => `/admin/users/${userId}/reactivate`,
   
   // Utility
   health: '/',

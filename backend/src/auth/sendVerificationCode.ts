@@ -49,6 +49,7 @@ router.post(
           code,
           expiresAt,
           usedAt: null,
+          purpose: "EMAIL_VERIFICATION",
         },
       });
 

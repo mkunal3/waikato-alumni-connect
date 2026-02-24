@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
+import prisma from "../prisma";
 
 /**
  * Custom Request type extending Express Request
@@ -69,5 +70,43 @@ export const authenticate = (
       console.error("Authentication error:", error);
     }
     res.status(401).json({ error: "Unauthorized" });
+  }
+};
+
+/**
+ * Middleware: Verify user account is active
+ * 
+ * Must be used AFTER authenticate middleware
+ * Queries database to check user.isActive status
+ * On inactive: Returns 403 Forbidden
+ * On active: Proceeds to next middleware/route
+ */
+export const requireActiveUser = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    if (!req.userId) {
+      res.status(401).json({ error: "Unauthorized" });
+      return;
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: req.userId },
+      select: { id: true, isActive: true },
+    });
+
+    if (!user || !user.isActive) {
+      res.status(403).json({
+        error: "Your account is inactive. Please contact an administrator.",
+      });
+      return;
+    }
+
+    next();
+  } catch (error) {
+    console.error("Error checking user active status:", error);
+    res.status(500).json({ error: "Internal server error" });
   }
 };

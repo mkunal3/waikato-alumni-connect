@@ -13,10 +13,8 @@ import profileRouter from "./routes/profile";
 import studentRouter from "./routes/student";
 import mentorRouter from "./routes/mentor";
 import messageRouter from "./routes/message";
-import getVerificationCodeRouter from "./routes/getVerificationCode";
-import getLatestVerificationCodeRouter from "./routes/getLatestVerificationCode";
-import setupAdminRouter from "./routes/setupAdmin";
 import prisma from "./prisma";
+import { authenticate, requireActiveUser } from "./middleware/authMiddleware";
 
 const app = express();
 const httpServer = createServer(app);
@@ -48,15 +46,12 @@ app.use(express.json());
 app.use("/auth", registerRoute);
 app.use("/auth", loginRoute);
 app.use("/auth", sendVerificationCodeRoute);
-app.use("/match", matchRouter);
-app.use("/admin", adminRouter);
-app.use("/profile", profileRouter);
-app.use("/student", studentRouter);
-app.use("/mentor", mentorRouter);
-app.use("/message", messageRouter);
-app.use("/get-verification-code", getVerificationCodeRouter);
-app.use("/get-latest-verification-code", getLatestVerificationCodeRouter);
-app.use("/", setupAdminRouter);
+app.use("/match", authenticate, requireActiveUser, matchRouter);
+app.use("/admin", authenticate, requireActiveUser, adminRouter);
+app.use("/profile", authenticate, requireActiveUser, profileRouter);
+app.use("/student", authenticate, requireActiveUser, studentRouter);
+app.use("/mentor", authenticate, requireActiveUser, mentorRouter);
+app.use("/message", authenticate, requireActiveUser, messageRouter);
 
 // Health check
 app.get("/", (_req: Request, res: Response) => {

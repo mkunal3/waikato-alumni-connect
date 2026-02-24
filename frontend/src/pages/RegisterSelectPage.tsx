@@ -1,4 +1,3 @@
-import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { GraduationCap, Users } from 'lucide-react';
 import { WaikatoNavigation } from '../components/WaikatoNavigation';

@@ -5,12 +5,17 @@ export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localho
 export const API_ENDPOINTS = {
   // Authentication
   register: '/auth/register',
+  registerAdmin: '/auth/register-admin',
   login: '/auth/login',
   me: '/auth/me',
   sendVerificationCode: '/auth/send-verification-code',
+  changePassword: '/auth/change-password',
+  registerAdminInvite: '/auth/register-admin',
   
   // Profile
   profile: '/profile',
+  uploadProfilePhoto: '/users/me/profile-photo',
+  deleteProfilePhoto: '/users/me/profile-photo',
   
   // CV
   uploadCV: '/student/cv',
@@ -50,7 +55,15 @@ export const API_ENDPOINTS = {
   adminRejectAlumni: (userId: number) => `/admin/mentors/${userId}/reject`,
   adminGetInvitationCode: '/admin/invitation-code',
   adminCreateInvitationCode: '/admin/invitation-code',
+  adminGetAdminInvitationCode: '/admin/admin-invitation-code',
+  adminCreateAdminInvitationCode: '/admin/admin-invitation-code',
+  adminCreateAdminInvite: '/admin/admin-invites',
+  adminListPendingAdminInvites: '/admin/admin-invites/pending',
   adminCreateMatch: '/admin/matches/create',
+  adminCancelMatch: (matchId: number) => `/admin/matches/${matchId}/cancel`,
+  adminListAdmins: '/admin/admins',
+  adminDeactivateAdmin: (adminId: number) => `/admin/admins/${adminId}/deactivate`,
+  adminReactivateAdmin: (adminId: number) => `/admin/admins/${adminId}/reactivate`,
   
   // Utility
   health: '/',
@@ -117,6 +130,12 @@ export async function apiRequest<T>(
       }
       const errorMessage = errorData.error || errorData.message || `HTTP error! status: ${response.status}`;
       
+      // Handle 403 Forbidden - Account Inactive (forced logout)
+      if (response.status === 403 && errorData.error === 'ACCOUNT_INACTIVE') {
+        handleUnauthorized();
+        throw new Error(errorData.message || 'Your account has been deactivated. Please log in again.');
+      }
+      
       // Handle 401 Unauthorized
       if (response.status === 401) {
         // For login endpoint, show the actual error message (e.g., "Invalid email or password")
@@ -152,6 +171,12 @@ export async function apiRequest<T>(
         errorData = { error: `HTTP error! status: ${response.status}` };
       }
       const errorMessage = errorData.error || errorData.message || `HTTP error! status: ${response.status}`;
+      
+      // Handle 403 Forbidden - Account Inactive (forced logout)
+      if (response.status === 403 && errorData.error === 'ACCOUNT_INACTIVE') {
+        handleUnauthorized();
+        throw new Error(errorData.message || 'Your account has been deactivated. Please log in again.');
+      }
       
       // Handle 401 Unauthorized
       if (response.status === 401) {

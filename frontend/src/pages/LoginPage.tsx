@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -10,6 +10,8 @@ export function LoginPage() {
   const { t } = useLanguage();
   const { login, isAuthenticated, user } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const [passwordChangedMsg, setPasswordChangedMsg] = useState(location.state?.passwordChanged || false);
   
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState('');
@@ -64,6 +66,11 @@ export function LoginPage() {
       <WaikatoNavigation />
       <main style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '3rem 1.5rem' }}>
         <div style={{ width: '100%', maxWidth: '480px', backgroundColor: 'white', borderRadius: '12px', padding: '2.5rem', boxShadow: '0 2px 6px rgba(0,0,0,0.1)' }}>
+            {passwordChangedMsg && (
+              <div style={{ marginBottom: '1rem', padding: '0.75rem 1rem', backgroundColor: '#ecfdf3', border: '1px solid #bbf7d0', borderRadius: '8px', color: '#166534', fontSize: '0.9rem', fontWeight: 500 }}>
+                Password changed successfully. Please log in again.
+              </div>
+            )}
             {/* Heading */}
             <div style={{ marginBottom: '0.5rem' }}>
               <h1 style={{ fontSize: '2rem', fontWeight: 'bold', color: 'black', marginBottom: '0.5rem' }}>Login</h1>
@@ -134,11 +141,11 @@ export function LoginPage() {
               {/* Forgot Password Link */}
               <div style={{ textAlign: 'right' }}>
                 <a 
-                  href="#" 
+                  href="/forgot-password" 
                   style={{ color: '#D50000', fontSize: '0.875rem', textDecoration: 'none' }}
                   onClick={(e) => {
                     e.preventDefault();
-                    // TODO: Implement forgot password
+                    navigate('/forgot-password');
                   }}
                 >
                   Forgot password?
@@ -169,6 +176,18 @@ export function LoginPage() {
                 >
                   Register here
                 </a>
+                <div style={{ marginTop: '0.5rem' }}>
+                  <a
+                    href="/register/admin-invite"
+                    style={{ color: '#D50000', fontSize: '0.875rem', textDecoration: 'none', fontWeight: 600 }}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      navigate('/register/admin-invite');
+                    }}
+                  >
+                    Register as Admin (invite only)
+                  </a>
+                </div>
               </div>
             </form>
           </div>

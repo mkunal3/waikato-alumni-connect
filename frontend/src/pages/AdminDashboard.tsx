@@ -5,7 +5,7 @@ import { apiRequest, API_BASE_URL } from '../config/api';
 import { API_ENDPOINTS } from '../config/api';
 import { 
   GraduationCap, Award, CheckCircle, XCircle, LogOut,
-  Target, FileText, ArrowLeft, Key, Copy, Plus, ChevronDown, AlertCircle
+  Target, FileText, ArrowLeft, Key, Copy, Plus, ChevronDown, AlertCircle, UserCircle
 } from 'lucide-react';
 
 const waikatoLogo = '/waikato-logo.png';
@@ -113,14 +113,21 @@ interface AdminStats {
   totalMatches: number;
 }
 
+interface AdminInviteSummary {
+  email: string;
+  expiresAt: string;
+  createdAt: string;
+}
+
 export function AdminDashboard() {
   const { user, logout } = useAuth();
+  const currentUserId = user?.id ?? null;
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   
   // Initialize viewMode from URL params or default to 'overview'
   const initialViewMode = (() => {
-    const view = searchParams.get('view') as 'overview' | 'students' | 'studentDetail' | 'alumni' | 'alumniDetail' | 'matches' | 'matchDetail' | 'pending' | 'pendingDetail' | 'stats' | null;
+    const view = searchParams.get('view') as 'overview' | 'students' | 'studentDetail' | 'alumni' | 'alumniDetail' | 'matches' | 'matchDetail' | 'pending' | 'pendingDetail' | 'admins' | 'stats' | null;
     // Map 'stats' to 'overview' for backward compatibility
     if (view === 'stats') return 'overview';
     return view || 'overview';
@@ -128,6 +135,7 @@ export function AdminDashboard() {
   
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [stats, setStats] = useState<AdminStats>({
     totalStudents: 0,
     totalAlumni: 0,
@@ -142,7 +150,7 @@ export function AdminDashboard() {
   const [activeMatchesCount, setActiveMatchesCount] = useState<number>(0); // Unique alumni in active matches (for Alumni card)
   const [activeMatchesNumber, setActiveMatchesNumber] = useState<number>(0); // Total active matches count (for Matches card)
   const [awaitingAlumniCount, setAwaitingAlumniCount] = useState<number>(0);
-  const [viewMode, setViewMode] = useState<'overview' | 'students' | 'studentDetail' | 'alumni' | 'alumniDetail' | 'matches' | 'matchDetail' | 'pending' | 'pendingDetail'>(initialViewMode);
+  const [viewMode, setViewMode] = useState<'overview' | 'students' | 'studentDetail' | 'alumni' | 'alumniDetail' | 'matches' | 'matchDetail' | 'pending' | 'pendingDetail' | 'admins'>(initialViewMode);
   const [studentSubFilter, setStudentSubFilter] = useState<'all' | 'approved' | 'pending'>('all');
   const [alumniSubFilter, setAlumniSubFilter] = useState<'all' | 'matched' | 'unmatched' | 'awaitingResponse'>('all');
   const [matchSubFilter, setMatchSubFilter] = useState<'all' | 'active' | 'completed' | 'pending' | 'awaitingAlumni'>('all');
@@ -162,11 +170,38 @@ export function AdminDashboard() {
   const [newInvitationCode, setNewInvitationCode] = useState('');
   const [showInvitationModal, setShowInvitationModal] = useState(false);
   const [creatingInvitationCode, setCreatingInvitationCode] = useState(false);
+  const [newAdminInvitationCode, setNewAdminInvitationCode] = useState('');
+  const [showAdminInvitationModal, setShowAdminInvitationModal] = useState(false);
+  const [creatingAdminInvitationCode, setCreatingAdminInvitationCode] = useState(false);
+  const [adminInvites, setAdminInvites] = useState<AdminInviteSummary[]>([]);
+  const [newAdminInviteEmail, setNewAdminInviteEmail] = useState('');
+  const [creatingAdminInvite, setCreatingAdminInvite] = useState(false);
+  const [lastAdminInviteCode, setLastAdminInviteCode] = useState<string | null>(null);
+  const [lastAdminInviteExpiresAt, setLastAdminInviteExpiresAt] = useState<string | null>(null);
+  const [lastAdminInviteEmail, setLastAdminInviteEmail] = useState<string | null>(null);
   const [showCreateMatchModal, setShowCreateMatchModal] = useState(false);
   const [selectedStudentForMatch, setSelectedStudentForMatch] = useState<Student | null>(null);
   const [selectedAlumniForMatch, setSelectedAlumniForMatch] = useState<Alumni | null>(null);
   const [matchCoverLetter, setMatchCoverLetter] = useState('');
   const [creatingMatch, setCreatingMatch] = useState(false);
+  const [showProfileModal, setShowProfileModal] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmNewPassword, setConfirmNewPassword] = useState('');
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [passwordSuccess, setPasswordSuccess] = useState<string | null>(null);
+  const [updatingPassword, setUpdatingPassword] = useState(false);
+  
+  // Profile photo upload state
+  const [uploadingProfilePhoto, setUploadingProfilePhoto] = useState(false);
+  const [profilePhotoError, setProfilePhotoError] = useState<string | null>(null);
+
+  // Admin management state
+  const [admins, setAdmins] = useState<Array<{ id: number; name: string; email: string; isActive: boolean; passwordUpdatedAt: string | null; createdAt: string }>>([]);
+  const [processingAdminId, setProcessingAdminId] = useState<number | null>(null);
 
   // Update URL when viewMode changes
   useEffect(() => {
@@ -192,10 +227,11 @@ export function AdminDashboard() {
         // Determine what data to load based on current viewMode
         const shouldLoadStudents = viewMode === 'students' || viewMode === 'studentDetail';
         const shouldLoadAlumni = viewMode === 'alumni' || viewMode === 'alumniDetail';
+        const shouldLoadAdmins = viewMode === 'admins';
         // Load matches for students/alumni views too, as we need match status for displaying student/alumni status
         const shouldLoadMatches = viewMode === 'matches' || viewMode === 'matchDetail' || viewMode === 'overview' || viewMode === 'students' || viewMode === 'studentDetail' || viewMode === 'alumni' || viewMode === 'alumniDetail';
 
-        const [statsResponse, studentsResponse, alumniResponse, matchesResponse, invitationCodeResponse] = await Promise.allSettled([
+        const [statsResponse, studentsResponse, alumniResponse, matchesResponse, invitationCodeResponse, _adminInvitationCodeResponse, adminInvitesResponse, adminsResponse] = await Promise.allSettled([
           apiRequest<AdminStats>(API_ENDPOINTS.adminStatistics),
           shouldLoadStudents 
             ? apiRequest<{ students: Student[] }>(API_ENDPOINTS.adminAllStudents).catch(() => ({ students: [] }))
@@ -206,7 +242,12 @@ export function AdminDashboard() {
           shouldLoadMatches
             ? apiRequest<{ matches: Match[] }>(API_ENDPOINTS.adminAllMatches).catch(() => ({ matches: [] }))
             : Promise.resolve({ matches: [] }),
-          apiRequest<{ code: string | null }>(API_ENDPOINTS.adminGetInvitationCode).catch(() => ({ code: null }))
+          apiRequest<{ code: string | null }>(API_ENDPOINTS.adminGetInvitationCode).catch(() => ({ code: null })),
+          apiRequest<{ code: string | null }>(API_ENDPOINTS.adminGetAdminInvitationCode).catch(() => ({ code: null })),
+          apiRequest<{ invites: AdminInviteSummary[] }>(API_ENDPOINTS.adminListPendingAdminInvites).catch(() => ({ invites: [] })),
+          shouldLoadAdmins
+            ? apiRequest<{ admins: Array<{ id: number; name: string; email: string; isActive: boolean; passwordUpdatedAt: string | null; createdAt: string }> }>(API_ENDPOINTS.adminListAdmins).catch(() => ({ admins: [] }))
+            : Promise.resolve({ admins: [] })
         ]);
 
         if (statsResponse.status === 'fulfilled') {
@@ -281,6 +322,20 @@ export function AdminDashboard() {
         } else {
           setInvitationCode(null);
         }
+
+
+
+        if (adminInvitesResponse.status === 'fulfilled') {
+          setAdminInvites(adminInvitesResponse.value.invites || []);
+        } else {
+          setAdminInvites([]);
+        }
+
+        if (adminsResponse.status === 'fulfilled') {
+          setAdmins(adminsResponse.value.admins || []);
+        } else {
+          setAdmins([]);
+        }
       } catch (err) {
         console.warn('Failed to load data:', err);
         setError('Failed to load dashboard data');
@@ -299,6 +354,77 @@ export function AdminDashboard() {
 
   const handleLogoClick = () => {
     navigate('/');
+  };
+
+  const handleOpenProfile = () => {
+    setPasswordError(null);
+    setPasswordSuccess(null);
+    setShowProfileModal(true);
+  };
+
+  const handleCloseProfile = () => {
+    setShowProfileModal(false);
+  };
+
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPasswordError(null);
+    setPasswordSuccess(null);
+
+    if (!currentPassword.trim() || !newPassword.trim() || !confirmNewPassword.trim()) {
+      setPasswordError('All fields are required');
+      return;
+    }
+
+    if (newPassword !== confirmNewPassword) {
+      setPasswordError('New passwords do not match');
+      return;
+    }
+
+    if (newPassword.length < 8) {
+      setPasswordError('Password must be at least 8 characters long');
+      return;
+    }
+
+    const hasUppercase = /[A-Z]/.test(newPassword);
+    const hasSpecialChar = /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(newPassword);
+
+    if (!hasUppercase) {
+      setPasswordError('Password must include at least one uppercase letter');
+      return;
+    }
+
+    if (!hasSpecialChar) {
+      setPasswordError('Password must include at least one special character');
+      return;
+    }
+
+    setUpdatingPassword(true);
+
+    try {
+      await apiRequest(API_ENDPOINTS.changePassword, {
+        method: 'POST',
+        body: JSON.stringify({
+          currentPassword,
+          newPassword,
+        }),
+      });
+
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmNewPassword('');
+      setShowProfileModal(false);
+      logout();
+      navigate('/login', { replace: true, state: { passwordChanged: true } });
+    } catch (err) {
+      let errorMessage = 'Failed to change password.';
+      if (err instanceof Error) {
+        errorMessage = err.message;
+      }
+      setPasswordError(errorMessage);
+    } finally {
+      setUpdatingPassword(false);
+    }
   };
 
   const handleViewAllStudents = async () => {
@@ -380,20 +506,7 @@ export function AdminDashboard() {
     setViewMode('alumniDetail');
   };
 
-  const handleViewPendingStudents = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const response = await apiRequest<{ students: Student[] }>(API_ENDPOINTS.adminPendingStudents);
-      setPendingStudents(response.students || []);
-      setViewMode('pending');
-    } catch (err) {
-      console.error('Failed to load pending students:', err);
-      setError('Failed to load pending students list');
-    } finally {
-      setLoading(false);
-    }
-  };
+
 
   const handleBackToPendingList = () => {
     setViewMode('pending');
@@ -436,13 +549,7 @@ export function AdminDashboard() {
     }
   };
 
-  const handleViewPendingMatches = () => {
-    handleViewAllMatches('pending');
-  };
 
-  const handleViewActiveMatches = () => {
-    handleViewAllMatches('active');
-  };
 
   const handleBackToMatchesList = () => {
     setViewMode('matches');
@@ -452,6 +559,34 @@ export function AdminDashboard() {
   const handleViewMatchDetail = (match: Match) => {
     setSelectedMatch(match);
     setViewMode('matchDetail');
+  };
+
+  const handleCancelMatch = async (matchId: number) => {
+    if (!window.confirm('Are you sure you want to cancel this match?')) {
+      return;
+    }
+
+    const reason = window.prompt('Enter cancellation reason (optional):');
+
+    try {
+      setProcessingMatch(matchId);
+      setError(null);
+
+      await apiRequest(API_ENDPOINTS.adminCancelMatch(matchId), {
+        method: 'POST',
+        body: JSON.stringify({ reason: reason || null }),
+      });
+
+      setViewMode('matches');
+      setSelectedMatch(null);
+
+      const matchesResponse = await apiRequest<{ matches: Match[] }>(API_ENDPOINTS.adminAllMatches);
+      setAllMatches(matchesResponse.matches || []);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to cancel match');
+    } finally {
+      setProcessingMatch(null);
+    }
   };
 
   const handleApproveMatch = async (matchId: number) => {
@@ -625,10 +760,10 @@ export function AdminDashboard() {
         ? API_ENDPOINTS.adminApproveStudent(userId)
         : API_ENDPOINTS.adminApproveAlumni(userId);
       
-      const response = await apiRequest(endpoint, { method: 'POST' });
+      await apiRequest(endpoint, { method: 'POST' });
       
       // Refresh data
-      const [studentsResponse, alumniResponse, statsResponse, allStudentsResponse, allAlumniResponse] = await Promise.allSettled([
+      const [studentsResponse, _alumniResponse, statsResponse, allStudentsResponse, allAlumniResponse] = await Promise.allSettled([
         apiRequest<{ students: PendingUser[] }>(API_ENDPOINTS.adminPendingStudents).catch(() => ({ students: [] })),
         apiRequest<{ mentors: PendingUser[] }>(API_ENDPOINTS.adminPendingAlumni).catch(() => ({ mentors: [] })),
         apiRequest<AdminStats>(API_ENDPOINTS.adminStatistics),
@@ -716,6 +851,61 @@ export function AdminDashboard() {
     }
   };
 
+  const handleCreateAdminInvitationCode = async () => {
+    if (!newAdminInvitationCode.trim()) {
+      setError('Please enter an admin invitation code');
+      return;
+    }
+
+    try {
+      setCreatingAdminInvitationCode(true);
+      setError(null);
+
+      const response = await apiRequest<{ invitationCode: { code: string } }>(API_ENDPOINTS.adminCreateAdminInvitationCode, {
+        method: 'POST',
+        body: JSON.stringify({ code: newAdminInvitationCode.trim() }),
+      });
+
+      setLastAdminInviteCode(response.invitationCode.code);
+      setShowAdminInvitationModal(false);
+      setNewAdminInvitationCode('');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to create admin invitation code');
+    } finally {
+      setCreatingAdminInvitationCode(false);
+    }
+  };
+
+  const handleCreateAdminInvite = async () => {
+    if (!newAdminInviteEmail.trim()) {
+      setError('Please enter a staff email');
+      return;
+    }
+
+    try {
+      setCreatingAdminInvite(true);
+      setError(null);
+
+      const response = await apiRequest<{ invite: { email: string; code: string; expiresAt: string } }>(API_ENDPOINTS.adminCreateAdminInvite, {
+        method: 'POST',
+        body: JSON.stringify({ email: newAdminInviteEmail.trim() }),
+      });
+
+      setLastAdminInviteCode(response.invite.code);
+      setLastAdminInviteExpiresAt(response.invite.expiresAt);
+      setLastAdminInviteEmail(response.invite.email);
+      setNewAdminInviteEmail('');
+
+      // refresh pending invites list
+      const invitesResp = await apiRequest<{ invites: AdminInviteSummary[] }>(API_ENDPOINTS.adminListPendingAdminInvites);
+      setAdminInvites(invitesResp.invites || []);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to create admin invite');
+    } finally {
+      setCreatingAdminInvite(false);
+    }
+  };
+
   const handleReject = async (userId: number, role: string) => {
     if (!window.confirm(`Are you sure you want to reject this ${role}?`)) {
       return;
@@ -730,7 +920,7 @@ export function AdminDashboard() {
       await apiRequest(endpoint, { method: 'POST' });
       
       // Refresh data
-      const [studentsResponse, alumniResponse, statsResponse, allStudentsResponse, allAlumniResponse] = await Promise.allSettled([
+      const [studentsResponse, _alumniResponse, statsResponse, allStudentsResponse, allAlumniResponse] = await Promise.allSettled([
         apiRequest<{ students: PendingUser[] }>(API_ENDPOINTS.adminPendingStudents).catch(() => ({ students: [] })),
         apiRequest<{ mentors: PendingUser[] }>(API_ENDPOINTS.adminPendingAlumni).catch(() => ({ mentors: [] })),
         apiRequest<AdminStats>(API_ENDPOINTS.adminStatistics),
@@ -786,6 +976,94 @@ export function AdminDashboard() {
     }
   };
 
+  const handleDeactivateAdmin = async (adminId: number) => {
+    if (!window.confirm('Are you sure you want to deactivate your account? You will not be able to log in.')) {
+      return;
+    }
+
+    try {
+      setError(null);
+      setProcessingAdminId(adminId);
+      
+      await apiRequest(API_ENDPOINTS.adminDeactivateAdmin(adminId), { method: 'POST' });
+      
+      setSuccessMessage('Your account has been deactivated.');
+      
+      // Refresh admins list
+      const response = await apiRequest<{ admins: Array<{ id: number; name: string; email: string; isActive: boolean; passwordUpdatedAt: string | null; createdAt: string }> }>(API_ENDPOINTS.adminListAdmins);
+      setAdmins(response.admins || []);
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : 'Failed to deactivate account';
+      setError(errorMsg);
+    } finally {
+      setProcessingAdminId(null);
+    }
+  };
+
+  const handleReactivateAdmin = async (adminId: number) => {
+    try {
+      setError(null);
+      setProcessingAdminId(adminId);
+      
+      await apiRequest(API_ENDPOINTS.adminReactivateAdmin(adminId), { method: 'POST' });
+      
+      setSuccessMessage('Admin account reactivated successfully.');
+      
+      // Refresh admins list
+      const response = await apiRequest<{ admins: Array<{ id: number; name: string; email: string; isActive: boolean; passwordUpdatedAt: string | null; createdAt: string }> }>(API_ENDPOINTS.adminListAdmins);
+      setAdmins(response.admins || []);
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : 'Failed to reactivate admin';
+      setError(errorMsg);
+    } finally {
+      setProcessingAdminId(null);
+    }
+  };
+
+  const handleUploadProfilePhoto = async (file: File) => {
+    try {
+      setProfilePhotoError(null);
+      setUploadingProfilePhoto(true);
+
+      // Validate file type
+      if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+        setProfilePhotoError('Only JPEG, PNG, and WebP images are allowed');
+        return;
+      }
+
+      // Validate file size (2MB)
+      if (file.size > 2 * 1024 * 1024) {
+        setProfilePhotoError('File size must not exceed 2MB');
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await apiRequest<{ profilePhotoUrl: string; user: any }>(
+        API_ENDPOINTS.uploadProfilePhoto,
+        {
+          method: 'POST',
+          body: formData,
+          headers: {}, // Let the browser set Content-Type for FormData
+        }
+      );
+
+      // Update local user state with new photo URL
+      if (user) {
+        user.profilePhotoFilePath = response.profilePhotoUrl;
+      }
+
+      setSuccessMessage('Profile photo uploaded successfully');
+      setTimeout(() => setSuccessMessage(null), 3000);
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : 'Failed to upload profile photo';
+      setProfilePhotoError(errorMsg);
+    } finally {
+      setUploadingProfilePhoto(false);
+    }
+  };
+
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#f9fafb' }}>
       <style>{`
@@ -811,6 +1089,13 @@ export function AdminDashboard() {
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+              <button
+                onClick={handleOpenProfile}
+                style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', backgroundColor: 'white', color: '#111827', padding: '0.5rem 0.9rem', borderRadius: '0.5rem', border: '1px solid #d1d5db', cursor: 'pointer', fontWeight: 600 }}
+              >
+                <UserCircle size={16} />
+                <span>Profile</span>
+              </button>
               <button onClick={handleLogout} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', backgroundColor: '#D50000', color: 'white', padding: '0.5rem 1rem', borderRadius: '0.5rem', border: 'none', cursor: 'pointer', fontWeight: 600 }}>
                 <LogOut size={16} />
                 <span>Logout</span>
@@ -820,11 +1105,295 @@ export function AdminDashboard() {
         </div>
       </header>
 
+      {showProfileModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }}>
+          <div style={{
+            backgroundColor: 'white',
+            borderRadius: '0.75rem',
+            boxShadow: '0 10px 25px rgba(0,0,0,0.2)',
+            padding: '1.75rem',
+            maxWidth: '520px',
+            width: '90%',
+            maxHeight: '90vh',
+            overflow: 'auto'
+          }}>
+            <h3 style={{ fontSize: '1.25rem', fontWeight: 600, marginBottom: '1rem' }}>My Profile</h3>
+
+            {/* Profile Photo Section */}
+            <div style={{ marginBottom: '1.5rem', textAlign: 'center' }}>
+              <div style={{ 
+                width: '80px', 
+                height: '80px', 
+                margin: '0 auto 1rem', 
+                borderRadius: '50%', 
+                backgroundColor: '#e5e7eb',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                overflow: 'hidden',
+                border: '2px solid #d1d5db'
+              }}>
+                {user?.profilePhotoFilePath ? (
+                  <img 
+                    src={`${API_BASE_URL}${user.profilePhotoFilePath}`} 
+                    alt={user.name}
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  />
+                ) : (
+                  <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#6b7280' }}>
+                    {user?.name?.split(' ').map(n => n[0]).join('').toUpperCase() || 'A'}
+                  </div>
+                )}
+              </div>
+              
+              {profilePhotoError && (
+                <div style={{ marginBottom: '0.75rem', padding: '0.5rem', backgroundColor: '#fef2f2', border: '1px solid #fecaca', borderRadius: '0.5rem', color: '#b91c1c', fontSize: '0.8rem' }}>
+                  {profilePhotoError}
+                </div>
+              )}
+
+              <input
+                type="file"
+                id="profilePhotoInput"
+                accept="image/jpeg,image/png,image/webp"
+                style={{ display: 'none' }}
+                onChange={(e) => {
+                  if (e.target.files?.[0]) {
+                    handleUploadProfilePhoto(e.target.files[0]);
+                  }
+                }}
+                disabled={uploadingProfilePhoto}
+              />
+              <button
+                type="button"
+                onClick={() => document.getElementById('profilePhotoInput')?.click()}
+                disabled={uploadingProfilePhoto}
+                style={{
+                  backgroundColor: uploadingProfilePhoto ? '#9ca3af' : '#D50000',
+                  color: 'white',
+                  padding: '0.5rem 1rem',
+                  borderRadius: '0.5rem',
+                  border: 'none',
+                  cursor: uploadingProfilePhoto ? 'not-allowed' : 'pointer',
+                  fontSize: '0.875rem',
+                  fontWeight: 500,
+                  width: '100%'
+                }}
+              >
+                {uploadingProfilePhoto ? 'Uploading...' : 'Upload Photo'}
+              </button>
+              <p style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '0.5rem' }}>
+                JPEG, PNG, or WebP • Max 2MB
+              </p>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '1.5rem', padding: '1rem', border: '1px solid #e5e7eb', borderRadius: '0.75rem', backgroundColor: '#f9fafb' }}>
+              <div>
+                <p style={{ color: '#6b7280', fontSize: '0.875rem', marginBottom: '0.25rem' }}>Name</p>
+                <p style={{ color: '#111827', fontWeight: 600 }}>{user?.name || 'Admin'}</p>
+              </div>
+              <div>
+                <p style={{ color: '#6b7280', fontSize: '0.875rem', marginBottom: '0.25rem' }}>Email</p>
+                <p style={{ color: '#111827', fontWeight: 600 }}>{user?.email || 'N/A'}</p>
+              </div>
+              {user?.role && (
+                <div>
+                  <p style={{ color: '#6b7280', fontSize: '0.875rem', marginBottom: '0.25rem' }}>Designation</p>
+                  <p style={{ color: '#111827', fontWeight: 600 }}>{user.role}</p>
+                </div>
+              )}
+              <div>
+                <p style={{ color: '#6b7280', fontSize: '0.875rem', marginBottom: '0.25rem' }}>Last Password Change</p>
+                <p style={{ color: '#111827', fontWeight: 600 }}>
+                  {user?.passwordUpdatedAt ? new Date(user.passwordUpdatedAt).toLocaleString() : 'Not available'}
+                </p>
+              </div>
+            </div>
+
+            <div style={{ marginBottom: '1rem' }}>
+              <h4 style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '0.75rem' }}>Change Password</h4>
+
+              {passwordError && (
+                <div style={{ marginBottom: '0.75rem', padding: '0.75rem 1rem', backgroundColor: '#fef2f2', border: '1px solid #fecaca', borderRadius: '0.5rem', color: '#b91c1c', fontSize: '0.875rem' }}>
+                  {passwordError}
+                </div>
+              )}
+
+              {passwordSuccess && (
+                <div style={{ marginBottom: '0.75rem', padding: '0.75rem 1rem', backgroundColor: '#ecfdf3', border: '1px solid #bbf7d0', borderRadius: '0.5rem', color: '#166534', fontSize: '0.875rem' }}>
+                  {passwordSuccess}
+                </div>
+              )}
+
+              <form onSubmit={handleChangePassword} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                <div>
+                  <label htmlFor="currentPassword" style={{ display: 'block', color: '#374151', marginBottom: '0.35rem', fontWeight: 500 }}>
+                    Current Password
+                  </label>
+                  <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                    <input
+                      type={showCurrentPassword ? 'text' : 'password'}
+                      id="currentPassword"
+                      value={currentPassword}
+                      onChange={(e) => setCurrentPassword(e.target.value)}
+                      placeholder="Enter current password"
+                      style={{ width: '100%', padding: '0.75rem', border: '1px solid #d1d5db', borderRadius: '0.5rem', fontSize: '0.95rem', outline: 'none', paddingRight: '3rem' }}
+                      disabled={updatingPassword}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowCurrentPassword((prev) => !prev)}
+                      aria-label={showCurrentPassword ? 'Hide current password' : 'Show current password'}
+                      disabled={updatingPassword}
+                      style={{
+                        position: 'absolute',
+                        right: '0.5rem',
+                        background: 'transparent',
+                        border: 'none',
+                        color: '#6b7280',
+                        cursor: updatingPassword ? 'not-allowed' : 'pointer',
+                        fontWeight: 600
+                      }}
+                    >
+                      {showCurrentPassword ? 'Hide' : 'Show'}
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <label htmlFor="newPassword" style={{ display: 'block', color: '#374151', marginBottom: '0.35rem', fontWeight: 500 }}>
+                    New Password
+                  </label>
+                  <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                    <input
+                      type={showNewPassword ? 'text' : 'password'}
+                      id="newPassword"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      placeholder="Enter new password"
+                      style={{ width: '100%', padding: '0.75rem', border: '1px solid #d1d5db', borderRadius: '0.5rem', fontSize: '0.95rem', outline: 'none', paddingRight: '3rem' }}
+                      disabled={updatingPassword}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowNewPassword((prev) => !prev)}
+                      aria-label={showNewPassword ? 'Hide new password' : 'Show new password'}
+                      disabled={updatingPassword}
+                      style={{
+                        position: 'absolute',
+                        right: '0.5rem',
+                        background: 'transparent',
+                        border: 'none',
+                        color: '#6b7280',
+                        cursor: updatingPassword ? 'not-allowed' : 'pointer',
+                        fontWeight: 600
+                      }}
+                    >
+                      {showNewPassword ? 'Hide' : 'Show'}
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <label htmlFor="confirmNewPassword" style={{ display: 'block', color: '#374151', marginBottom: '0.35rem', fontWeight: 500 }}>
+                    Confirm New Password
+                  </label>
+                  <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                    <input
+                      type={showConfirmPassword ? 'text' : 'password'}
+                      id="confirmNewPassword"
+                      value={confirmNewPassword}
+                      onChange={(e) => setConfirmNewPassword(e.target.value)}
+                      placeholder="Re-enter new password"
+                      style={{ width: '100%', padding: '0.75rem', border: '1px solid #d1d5db', borderRadius: '0.5rem', fontSize: '0.95rem', outline: 'none', paddingRight: '3rem' }}
+                      disabled={updatingPassword}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmPassword((prev) => !prev)}
+                      aria-label={showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'}
+                      disabled={updatingPassword}
+                      style={{
+                        position: 'absolute',
+                        right: '0.5rem',
+                        background: 'transparent',
+                        border: 'none',
+                        color: '#6b7280',
+                        cursor: updatingPassword ? 'not-allowed' : 'pointer',
+                        fontWeight: 600
+                      }}
+                    >
+                      {showConfirmPassword ? 'Hide' : 'Show'}
+                    </button>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '0.5rem' }}>
+                  <button
+                    type="button"
+                    onClick={handleCloseProfile}
+                    disabled={updatingPassword}
+                    style={{
+                      border: '1px solid #d1d5db',
+                      color: '#374151',
+                      padding: '0.6rem 1rem',
+                      borderRadius: '0.5rem',
+                      cursor: updatingPassword ? 'not-allowed' : 'pointer',
+                      backgroundColor: 'white',
+                      fontSize: '0.9rem',
+                      fontWeight: 600
+                    }}
+                  >
+                    Close
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={updatingPassword}
+                    style={{
+                      backgroundColor: updatingPassword ? '#9ca3af' : '#D50000',
+                      color: 'white',
+                      padding: '0.6rem 1.1rem',
+                      borderRadius: '0.5rem',
+                      cursor: updatingPassword ? 'not-allowed' : 'pointer',
+                      border: 'none',
+                      fontSize: '0.9rem',
+                      fontWeight: 600
+                    }}
+                  >
+                    {updatingPassword ? 'Updating...' : 'Update Password'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Error Message */}
       {error && (
         <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '1rem 1.5rem 0' }}>
           <div style={{ backgroundColor: '#fee2e2', border: '1px solid #fecaca', borderRadius: '0.5rem', padding: '0.75rem 1rem', color: '#dc2626', fontSize: '0.875rem' }}>
             {error}
+          </div>
+        </div>
+      )}
+
+      {/* Success Message */}
+      {successMessage && (
+        <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '1rem 1.5rem 0' }}>
+          <div style={{ backgroundColor: '#dcfce7', border: '1px solid #bbf7d0', borderRadius: '0.5rem', padding: '0.75rem 1rem', color: '#16a34a', fontSize: '0.875rem' }}>
+            {successMessage}
           </div>
         </div>
       )}
@@ -923,13 +1492,13 @@ export function AdminDashboard() {
                 Welcome back, {user?.name}!
               </h1>
               <p style={{ color: '#6b7280', fontSize: '0.95rem' }}>
-                Manage users, approvals, and system settings
+                Manage users, approvals, and invitations
               </p>
             </div>
 
-            {/* Main Overview - 3 Core Sections */}
+            {/* Main Overview - 4 Core Sections in 2x2 Grid */}
             {viewMode === 'overview' && (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1.5rem', marginBottom: '1.5rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1.5rem', marginBottom: '1.5rem' }}>
                 {/* Students Section */}
                 <div 
                   onClick={(e) => {
@@ -1139,6 +1708,68 @@ export function AdminDashboard() {
                     <ArrowLeft size={16} style={{ transform: 'rotate(180deg)' }} />
                   </div>
                 </div>
+
+                {/* Admins Section */}
+                <div
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setViewMode('admins');
+                  }}
+                  style={{ 
+                    backgroundColor: 'white', 
+                    borderRadius: '0.75rem', 
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.1)', 
+                    border: '2px solid #e5e7eb', 
+                    padding: '2rem',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s',
+                    minHeight: '200px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'space-between',
+                    position: 'relative',
+                    zIndex: 1
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.boxShadow = '0 8px 16px rgba(0,0,0,0.1)';
+                    e.currentTarget.style.borderColor = '#C8102E';
+                    e.currentTarget.style.transform = 'translateY(-2px)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.1)';
+                    e.currentTarget.style.borderColor = '#e5e7eb';
+                    e.currentTarget.style.transform = 'translateY(0)';
+                  }}
+                >
+                  <div style={{ pointerEvents: 'none', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
+                        <div style={{ width: '56px', height: '56px', borderRadius: '0.75rem', backgroundColor: '#e0e7ff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <UserCircle size={32} color="#4f46e5" />
+                        </div>
+                        <div>
+                          <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '0.25rem' }}>Admins</h2>
+                          <p style={{ fontSize: '0.875rem', color: '#6b7280' }}>Manage admin accounts</p>
+                        </div>
+                      </div>
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem', alignItems: 'end' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column' }}>
+                        <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#111827', marginBottom: '0.5rem' }}>{admins.filter(a => a.isActive).length}</div>
+                        <div style={{ fontSize: '0.875rem', color: '#6b7280' }}>Active Admins</div>
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column' }}>
+                        <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#f97316', marginBottom: '0.5rem' }}>{admins.filter(a => !a.isActive).length}</div>
+                        <div style={{ fontSize: '0.875rem', color: '#6b7280' }}>Inactive</div>
+                      </div>
+                    </div>
+                  </div>
+                  <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid #e5e7eb', fontSize: '0.875rem', color: '#6b7280', display: 'flex', alignItems: 'center', gap: '0.5rem', pointerEvents: 'none' }}>
+                    <span>Click to view details</span>
+                    <ArrowLeft size={16} style={{ transform: 'rotate(180deg)' }} />
+                  </div>
+                </div>
               </div>
             )}
 
@@ -1249,6 +1880,123 @@ export function AdminDashboard() {
               </div>
             )}
 
+            {/* Admin Invites (email-based) */}
+            {viewMode === 'overview' && (
+              <div style={{ backgroundColor: 'white', borderRadius: '0.75rem', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', border: '1px solid #e5e7eb', padding: '1.5rem', marginBottom: '1.5rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
+                  <h2 style={{ fontSize: '1.25rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <Key size={20} color="#C8102E" />
+                    Admin Invites
+                  </h2>
+                </div>
+
+                <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center', marginBottom: '1rem' }}>
+                  <input
+                    type="email"
+                    value={newAdminInviteEmail}
+                    onChange={(e) => setNewAdminInviteEmail(e.target.value)}
+                    placeholder="staff@waikato.ac.nz"
+                    style={{
+                      flex: 1,
+                      minWidth: '240px',
+                      padding: '0.75rem',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '0.5rem',
+                      fontSize: '0.95rem',
+                      fontFamily: 'inherit',
+                      outline: 'none'
+                    }}
+                    onFocus={(e) => { e.currentTarget.style.borderColor = '#C8102E'; }}
+                    onBlur={(e) => { e.currentTarget.style.borderColor = '#d1d5db'; }}
+                  />
+                  <button
+                    onClick={handleCreateAdminInvite}
+                    disabled={creatingAdminInvite}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      backgroundColor: creatingAdminInvite ? '#9ca3af' : '#C8102E',
+                      color: 'white',
+                      padding: '0.65rem 1rem',
+                      borderRadius: '0.5rem',
+                      border: 'none',
+                      cursor: creatingAdminInvite ? 'not-allowed' : 'pointer',
+                      fontSize: '0.9rem',
+                      fontWeight: 600,
+                      opacity: creatingAdminInvite ? 0.85 : 1
+                    }}
+                  >
+                    {creatingAdminInvite ? (
+                      <>
+                        <div style={{ width: '16px', height: '16px', border: '2px solid white', borderTop: '2px solid transparent', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+                        Creating...
+                      </>
+                    ) : (
+                      <>
+                        <Plus size={16} />
+                        Generate Invite
+                      </>
+                    )}
+                  </button>
+                </div>
+
+                {lastAdminInviteCode && (
+                  <div style={{
+                    padding: '1rem',
+                    borderRadius: '0.5rem',
+                    border: '1px solid #e5e7eb',
+                    backgroundColor: '#f9fafb',
+                    marginBottom: '1rem'
+                  }}>
+                    <p style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '0.5rem', fontWeight: 500 }}>Generated Invite</p>
+                    
+                    <div style={{ marginBottom: '0.75rem' }}>
+                      <p style={{ fontSize: '0.8rem', color: '#6b7280', marginBottom: '0.25rem' }}>Email</p>
+                      <p style={{ fontSize: '0.95rem', color: '#111827', fontWeight: 500 }}>{lastAdminInviteEmail}</p>
+                    </div>
+
+                    <div style={{ marginBottom: '0.75rem' }}>
+                      <p style={{ fontSize: '0.8rem', color: '#6b7280', marginBottom: '0.25rem' }}>Invite Code</p>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                        <p style={{ fontSize: '1rem', fontWeight: 700, fontFamily: 'monospace', color: '#111827', backgroundColor: 'white', padding: '0.5rem 0.75rem', borderRadius: '0.375rem', border: '1px solid #d1d5db', flex: 1 }}>{lastAdminInviteCode}</p>
+                        <button
+                          onClick={() => {
+                            navigator.clipboard.writeText(lastAdminInviteCode);
+                            alert('Admin invite code copied to clipboard!');
+                          }}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.5rem',
+                            backgroundColor: 'white',
+                            color: '#374151',
+                            padding: '0.5rem 0.75rem',
+                            borderRadius: '0.375rem',
+                            border: '1px solid #d1d5db',
+                            cursor: 'pointer',
+                            fontSize: '0.85rem',
+                            fontWeight: 500,
+                            whiteSpace: 'nowrap'
+                          }}
+                        >
+                          <Copy size={16} />
+                          Copy
+                        </button>
+                      </div>
+                    </div>
+
+                    {lastAdminInviteExpiresAt && (
+                      <div>
+                        <p style={{ fontSize: '0.8rem', color: '#6b7280', marginBottom: '0.25rem' }}>Valid Until</p>
+                        <p style={{ fontSize: '0.95rem', color: '#111827', fontWeight: 500 }}>{new Date(lastAdminInviteExpiresAt).toLocaleString()}</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* All Students List */}
             {viewMode === 'students' && (() => {
               // Get student match statuses - priority: accepted > confirmed > pending
@@ -1269,11 +2017,12 @@ export function AdminDashboard() {
               });
 
               // Get student IDs who are fully matched (accepted only)
-              const fullyMatchedStudentIds = new Set(
-                allMatches
-                  .filter(m => m.status === 'accepted')
-                  .map(m => m.student.id)
-              );
+              // Note: This set was created for potential future use but is not currently referenced
+              // const fullyMatchedStudentIds = new Set(
+              //   allMatches
+              //     .filter(m => m.status === 'accepted')
+              //     .map(m => m.student.id)
+              // );
 
               // Filter students by sub-filter
               const filteredStudents = allStudents.filter(s => {
@@ -2788,6 +3537,183 @@ export function AdminDashboard() {
               </div>
             )}
 
+            {/* All Admins List */}
+            {viewMode === 'admins' && (() => {
+              // Sort admins by email
+              const sortedAdmins = [...admins].sort((a, b) => a.email.localeCompare(b.email));
+
+              return (
+                <div style={{ backgroundColor: 'white', borderRadius: '0.75rem', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', border: '1px solid #e5e7eb', padding: '1.5rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                      <button
+                        onClick={handleBackToOverview}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          width: '36px',
+                          height: '36px',
+                          borderRadius: '0.5rem',
+                          border: '1px solid #d1d5db',
+                          backgroundColor: 'white',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.borderColor = '#C8102E';
+                          e.currentTarget.style.backgroundColor = '#f9fafb';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.borderColor = '#d1d5db';
+                          e.currentTarget.style.backgroundColor = 'white';
+                        }}
+                      >
+                        <ArrowLeft size={20} />
+                      </button>
+                      <h2 style={{ fontSize: '1.5rem', fontWeight: 600 }}>Admins Management</h2>
+                    </div>
+                  </div>
+
+                  {loading ? (
+                    <div style={{ textAlign: 'center', padding: '2rem', color: '#6b7280' }}>
+                      Loading...
+                    </div>
+                  ) : sortedAdmins.length > 0 ? (
+                    <div style={{ overflowX: 'auto' }}>
+                      <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                        <thead>
+                          <tr style={{ textAlign: 'left', backgroundColor: '#f9fafb' }}>
+                            <th style={{ padding: '0.75rem', borderBottom: '1px solid #e5e7eb', fontSize: '0.85rem', color: '#6b7280', fontWeight: 600 }}>Name</th>
+                            <th style={{ padding: '0.75rem', borderBottom: '1px solid #e5e7eb', fontSize: '0.85rem', color: '#6b7280', fontWeight: 600 }}>Email</th>
+                            <th style={{ padding: '0.75rem', borderBottom: '1px solid #e5e7eb', fontSize: '0.85rem', color: '#6b7280', fontWeight: 600 }}>Status</th>
+                            <th style={{ padding: '0.75rem', borderBottom: '1px solid #e5e7eb', fontSize: '0.85rem', color: '#6b7280', fontWeight: 600 }}>Last Password Change</th>
+                            <th style={{ padding: '0.75rem', borderBottom: '1px solid #e5e7eb', fontSize: '0.85rem', color: '#6b7280', fontWeight: 600 }}>Registered</th>
+                            <th style={{ padding: '0.75rem', borderBottom: '1px solid #e5e7eb', fontSize: '0.85rem', color: '#6b7280', fontWeight: 600 }}>Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {sortedAdmins.map((admin) => {
+                            const isCurrentUser = admin.id === currentUserId;
+                            const isActive = admin.isActive;
+
+                            return (
+                              <tr key={admin.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                                <td style={{ padding: '0.75rem', fontSize: '0.95rem', color: '#111827', fontWeight: 500 }}>{admin.name}</td>
+                                <td style={{ padding: '0.75rem', fontSize: '0.95rem', color: '#374151' }}>{admin.email}</td>
+                                <td style={{ padding: '0.75rem', fontSize: '0.9rem' }}>
+                                  <span style={{
+                                    fontSize: '0.75rem',
+                                    padding: '0.25rem 0.5rem',
+                                    borderRadius: '9999px',
+                                    backgroundColor: isActive ? '#dcfce7' : '#fee2e2',
+                                    color: isActive ? '#16a34a' : '#dc2626',
+                                    fontWeight: 500
+                                  }}>
+                                    {isActive ? 'Active' : 'Inactive'}
+                                  </span>
+                                </td>
+                                <td style={{ padding: '0.75rem', fontSize: '0.9rem', color: '#6b7280' }}>
+                                  {admin.passwordUpdatedAt ? new Date(admin.passwordUpdatedAt).toLocaleDateString() : 'N/A'}
+                                </td>
+                                <td style={{ padding: '0.75rem', fontSize: '0.9rem', color: '#6b7280' }}>
+                                  {new Date(admin.createdAt).toLocaleDateString()}
+                                </td>
+                                <td style={{ padding: '0.75rem', fontSize: '0.9rem' }}>
+                                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                    {isCurrentUser && isActive ? (
+                                      <button
+                                        onClick={() => handleDeactivateAdmin(admin.id)}
+                                        disabled={processingAdminId === admin.id}
+                                        style={{
+                                          display: 'inline-flex',
+                                          alignItems: 'center',
+                                          gap: '0.25rem',
+                                          backgroundColor: processingAdminId === admin.id ? '#9ca3af' : '#dc2626',
+                                          color: 'white',
+                                          padding: '0.35rem 0.75rem',
+                                          borderRadius: '0.375rem',
+                                          border: 'none',
+                                          cursor: processingAdminId === admin.id ? 'not-allowed' : 'pointer',
+                                          fontSize: '0.8rem',
+                                          fontWeight: 500
+                                        }}
+                                        title="You can only deactivate your own account"
+                                      >
+                                        {processingAdminId === admin.id ? (
+                                          <>
+                                            <div style={{ width: '12px', height: '12px', border: '2px solid white', borderTop: '2px solid transparent', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+                                            Deactivating...
+                                          </>
+                                        ) : (
+                                          <>
+                                            <XCircle size={14} />
+                                            Deactivate
+                                          </>
+                                        )}
+                                      </button>
+                                    ) : !isCurrentUser && !isActive ? (
+                                      <button
+                                        onClick={() => handleReactivateAdmin(admin.id)}
+                                        disabled={processingAdminId === admin.id}
+                                        style={{
+                                          display: 'inline-flex',
+                                          alignItems: 'center',
+                                          gap: '0.25rem',
+                                          backgroundColor: processingAdminId === admin.id ? '#9ca3af' : '#16a34a',
+                                          color: 'white',
+                                          padding: '0.35rem 0.75rem',
+                                          borderRadius: '0.375rem',
+                                          border: 'none',
+                                          cursor: processingAdminId === admin.id ? 'not-allowed' : 'pointer',
+                                          fontSize: '0.8rem',
+                                          fontWeight: 500
+                                        }}
+                                        title="Only another admin can reactivate this account"
+                                      >
+                                        {processingAdminId === admin.id ? (
+                                          <>
+                                            <div style={{ width: '12px', height: '12px', border: '2px solid white', borderTop: '2px solid transparent', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+                                            Reactivating...
+                                          </>
+                                        ) : (
+                                          <>
+                                            <CheckCircle size={14} />
+                                            Reactivate
+                                          </>
+                                        )}
+                                      </button>
+                                    ) : (
+                                      <span style={{
+                                        display: 'inline-block',
+                                        padding: '0.35rem 0.75rem',
+                                        borderRadius: '0.375rem',
+                                        backgroundColor: '#f3f4f6',
+                                        color: '#9ca3af',
+                                        fontSize: '0.8rem',
+                                        fontWeight: 500,
+                                        cursor: 'default'
+                                      }}>
+                                        {isCurrentUser && !isActive ? 'Account Inactive' : 'No Action'}
+                                      </span>
+                                    )}
+                                  </div>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : (
+                    <div style={{ textAlign: 'center', padding: '2rem 1rem', color: '#6b7280' }}>
+                      <p style={{ fontSize: '0.95rem' }}>No admins found</p>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
             {/* All Matches List */}
             {viewMode === 'matches' && (() => {
               const filteredMatches = matchSubFilter === 'all'
@@ -2963,17 +3889,46 @@ export function AdminDashboard() {
                                 <p style={{ fontSize: '0.875rem', color: '#6b7280', wordBreak: 'break-all', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{match.alumni.email}</p>
                               </div>
                             </div>
-                            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginTop: '0.5rem' }}>
+                            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginTop: '0.5rem', flexWrap: 'wrap' }}>
                               <span style={{
                                 fontSize: '0.75rem',
                                 padding: '0.25rem 0.5rem',
                                 borderRadius: '9999px',
-                                backgroundColor: match.status === 'confirmed' ? '#dcfce7' : match.status === 'pending' ? '#fef3c7' : '#fee2e2',
-                                color: match.status === 'confirmed' ? '#16a34a' : match.status === 'pending' ? '#d97706' : '#dc2626',
+                                backgroundColor: match.status === 'confirmed' ? '#dcfce7' : match.status === 'pending' ? '#fef3c7' : match.status === 'cancelled' ? '#f3f4f6' : '#fee2e2',
+                                color: match.status === 'confirmed' ? '#16a34a' : match.status === 'pending' ? '#d97706' : match.status === 'cancelled' ? '#6b7280' : '#dc2626',
                                 fontWeight: 500
                               }}>
-                                {match.status === 'confirmed' ? 'Awaiting Alumni' : match.status.charAt(0).toUpperCase() + match.status.slice(1)}
+                                {match.status === 'confirmed' ? 'Awaiting Alumni' : match.status === 'cancelled' ? 'Cancelled' : match.status.charAt(0).toUpperCase() + match.status.slice(1)}
                               </span>
+                              {match.status !== 'cancelled' && match.status !== 'completed' && (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleCancelMatch(match.id);
+                                  }}
+                                  style={{
+                                    fontSize: '0.75rem',
+                                    padding: '0.25rem 0.75rem',
+                                    borderRadius: '0.375rem',
+                                    backgroundColor: '#fee2e2',
+                                    color: '#dc2626',
+                                    border: '1px solid #fecaca',
+                                    fontWeight: 500,
+                                    cursor: 'pointer',
+                                    transition: 'all 0.2s'
+                                  }}
+                                  onMouseEnter={(e) => {
+                                    e.currentTarget.style.backgroundColor = '#fecaca';
+                                    e.currentTarget.style.color = '#b91c1c';
+                                  }}
+                                  onMouseLeave={(e) => {
+                                    e.currentTarget.style.backgroundColor = '#fee2e2';
+                                    e.currentTarget.style.color = '#dc2626';
+                                  }}
+                                >
+                                  Cancel
+                                </button>
+                              )}
                               {match.matchScore && (
                                 <span style={{ fontSize: '0.875rem', color: '#6b7280' }}>
                                   Score: {match.matchScore.toFixed(1)}%
@@ -3524,6 +4479,121 @@ export function AdminDashboard() {
                 }}
               >
                 {creatingInvitationCode ? (
+                  <>
+                    <div style={{ width: '16px', height: '16px', border: '2px solid white', borderTop: '2px solid transparent', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+                    Creating...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle size={16} />
+                    Create Code
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Create Admin Invitation Code Modal */}
+      {showAdminInvitationModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }}>
+          <div style={{
+            backgroundColor: 'white',
+            borderRadius: '0.75rem',
+            boxShadow: '0 10px 25px rgba(0,0,0,0.2)',
+            padding: '2rem',
+            maxWidth: '500px',
+            width: '90%',
+            maxHeight: '90vh',
+            overflow: 'auto'
+          }}>
+            <h3 style={{ fontSize: '1.25rem', fontWeight: 600, marginBottom: '1rem' }}>
+              Generate New Admin Invitation Code
+            </h3>
+            <p style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '1.5rem' }}>
+              Creating a new admin invitation code will automatically deactivate all previous admin codes. Only one admin code can be active at a time.
+            </p>
+            
+            <div style={{ marginBottom: '1.5rem' }}>
+              <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 500, marginBottom: '0.5rem', color: '#374151' }}>
+                Admin Invitation Code <span style={{ color: '#dc2626' }}>*</span>
+              </label>
+              <input
+                type="text"
+                value={newAdminInvitationCode}
+                onChange={(e) => setNewAdminInvitationCode(e.target.value)}
+                placeholder="Enter invitation code (e.g., ADMIN-2025)"
+                style={{
+                  width: '100%',
+                  padding: '0.75rem',
+                  border: '1px solid #d1d5db',
+                  borderRadius: '0.5rem',
+                  fontSize: '0.875rem',
+                  fontFamily: 'inherit',
+                  outline: 'none',
+                  transition: 'border-color 0.2s'
+                }}
+                onFocus={(e) => {
+                  e.currentTarget.style.borderColor = '#C8102E';
+                }}
+                onBlur={(e) => {
+                  e.currentTarget.style.borderColor = '#d1d5db';
+                }}
+                autoFocus
+              />
+            </div>
+
+            <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => {
+                  setShowAdminInvitationModal(false);
+                  setNewAdminInvitationCode('');
+                }}
+                disabled={creatingAdminInvitationCode}
+                style={{
+                  border: '1px solid #d1d5db',
+                  color: '#374151',
+                  padding: '0.5rem 1rem',
+                  borderRadius: '0.5rem',
+                  cursor: creatingAdminInvitationCode ? 'not-allowed' : 'pointer',
+                  backgroundColor: 'white',
+                  fontSize: '0.875rem',
+                  fontWeight: 500,
+                  opacity: creatingAdminInvitationCode ? 0.6 : 1
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleCreateAdminInvitationCode}
+                disabled={creatingAdminInvitationCode || !newAdminInvitationCode.trim()}
+                style={{
+                  backgroundColor: creatingAdminInvitationCode || !newAdminInvitationCode.trim() ? '#9ca3af' : '#C8102E',
+                  color: 'white',
+                  padding: '0.5rem 1rem',
+                  borderRadius: '0.5rem',
+                  cursor: creatingAdminInvitationCode || !newAdminInvitationCode.trim() ? 'not-allowed' : 'pointer',
+                  border: 'none',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  fontSize: '0.875rem',
+                  fontWeight: 500
+                }}
+              >
+                {creatingAdminInvitationCode ? (
                   <>
                     <div style={{ width: '16px', height: '16px', border: '2px solid white', borderTop: '2px solid transparent', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
                     Creating...

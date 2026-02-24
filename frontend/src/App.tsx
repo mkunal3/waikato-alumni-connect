@@ -7,9 +7,13 @@ import { ProtectedRoute } from './components/ProtectedRoute';
 import { DashboardRedirect } from './components/DashboardRedirect';
 import { HomePage } from './pages/HomePage';
 import { LoginPage } from './pages/LoginPage';
+import { ForgotPasswordPage } from './pages/ForgotPasswordPage';
+import { ResetPasswordPage } from './pages/ResetPasswordPage';
 import { RegisterSelectPage } from './pages/RegisterSelectPage';
 import { StudentRegisterPage } from './pages/StudentRegisterPage';
 import { AlumniRegisterPage } from './pages/AlumniRegisterPage';
+import { AdminRegisterPage } from './pages/AdminRegisterPage';
+import { AdminInviteRegisterPage } from './pages/AdminInviteRegisterPage';
 import { StudentDashboard } from './pages/StudentDashboard';
 import { StudentProfilePage } from './pages/StudentProfilePage';
 import { BrowseMentorsPage } from './pages/BrowseMentorsPage';
@@ -28,11 +32,15 @@ export default function App() {
             {/* Public routes */}
             <Route path="/" element={<HomePage />} />
             <Route path="/login" element={<LoginPage />} />
+            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+            <Route path="/reset-password" element={<ResetPasswordPage />} />
             
             {/* Registration routes */}
             <Route path="/register" element={<RegisterSelectPage />} />
             <Route path="/register/student" element={<StudentRegisterPage />} />
             <Route path="/register/alumni" element={<AlumniRegisterPage />} />
+            <Route path="/register/admin" element={<AdminRegisterPage />} />
+            <Route path="/register/admin-invite" element={<AdminInviteRegisterPage />} />
             
             {/* Dashboard redirect - automatically routes based on user role */}
             <Route 

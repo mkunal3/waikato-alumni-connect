@@ -9,6 +9,8 @@ export interface User {
   role: UserRole;
   approvalStatus: ApprovalStatus;
   createdAt: string;
+  passwordUpdatedAt?: string | null;
+  profilePhotoFilePath?: string | null;
 }
 
 export interface LoginRequest {
@@ -45,6 +47,7 @@ export interface ProfileResponse {
     role: UserRole;
     approvalStatus: ApprovalStatus;
     createdAt: string;
+    passwordUpdatedAt?: string | null;
     studentId?: string;
     degree?: string;
     yearOfStudy?: number;

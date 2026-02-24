@@ -4,15 +4,21 @@ import { Server } from "socket.io";
 import cors from "cors";
 import jwt from "jsonwebtoken";
 
+import path from "path";
 import registerRoute from "./auth/register";
+import registerAdminRoute from "./auth/registerAdmin";
 import loginRoute from "./auth/login";
 import sendVerificationCodeRoute from "./auth/sendVerificationCode";
+import forgotPasswordRoute from "./auth/forgotPassword";
+import resetPasswordRoute from "./auth/resetPassword";
+import changePasswordRoute from "./auth/changePassword";
 import matchRouter from "./routes/match";
 import adminRouter from "./routes/admin";
 import profileRouter from "./routes/profile";
 import studentRouter from "./routes/student";
 import mentorRouter from "./routes/mentor";
 import messageRouter from "./routes/message";
+import profilePhotoRouter from "./routes/profilePhoto";
 import prisma from "./prisma";
 import { authenticate, requireActiveUser } from "./middleware/authMiddleware";
 
@@ -42,31 +48,28 @@ app.use(cors({
 }));
 app.use(express.json());
 
+// Static file serving for uploads
+app.use("/uploads", express.static(path.join(__dirname, "..", "uploads")));
+
 // Routes
 app.use("/auth", registerRoute);
+app.use("/auth", registerAdminRoute);
 app.use("/auth", loginRoute);
 app.use("/auth", sendVerificationCodeRoute);
+app.use("/auth", forgotPasswordRoute);
+app.use("/auth", resetPasswordRoute);
+app.use("/auth", changePasswordRoute);
 app.use("/match", authenticate, requireActiveUser, matchRouter);
 app.use("/admin", authenticate, requireActiveUser, adminRouter);
 app.use("/profile", authenticate, requireActiveUser, profileRouter);
 app.use("/student", authenticate, requireActiveUser, studentRouter);
 app.use("/mentor", authenticate, requireActiveUser, mentorRouter);
 app.use("/message", authenticate, requireActiveUser, messageRouter);
+app.use("/", authenticate, requireActiveUser, profilePhotoRouter);
 
 // Health check
 app.get("/", (_req: Request, res: Response) => {
   res.json({ message: "Waikato Connect API is running" });
-});
-
-// Debug: Fetch all users
-app.get("/users", async (_req: Request, res: Response) => {
-  try {
-    const users = await prisma.user.findMany();
-    res.json(users);
-  } catch (error) {
-    console.error("Error fetching users:", error);
-    res.status(500).json({ error: "Internal server error" });
-  }
 });
 
 // Socket.io authentication middleware

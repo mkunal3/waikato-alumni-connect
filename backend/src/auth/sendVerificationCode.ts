@@ -43,8 +43,19 @@ router.post(
       const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
 
       // 5. Store in database
-      await prisma.emailVerification.create({
-        data: {
+      await prisma.emailVerification.upsert({
+        where: {
+          email_purpose: {
+            email: normalisedEmail,
+            purpose: "EMAIL_VERIFICATION",
+          },
+        },
+        update: {
+          code,
+          expiresAt,
+          usedAt: null,
+        },
+        create: {
           email: normalisedEmail,
           code,
           expiresAt,

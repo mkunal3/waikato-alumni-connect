@@ -1,4 +1,6 @@
 import { Router, Response, NextFunction } from "express";
+import crypto from "crypto";
+import bcrypt from "bcryptjs";
 import prisma from "../prisma";
 import { authenticate, AuthRequest } from "../middleware/authMiddleware";
 import path from "path";
@@ -22,6 +24,9 @@ const requireAdmin = (
   }
   next();
 };
+
+const isWaikatoStaffEmail = (email: string): boolean =>
+  email.toLowerCase().trim().endsWith("@waikato.ac.nz");
 
 /* OLD mentor approval logic (no longer used)
  *
@@ -611,6 +616,129 @@ router.get(
 );
 
 /**
+ * GET /admin/admin-invitation-code
+ *
+ * Fetch the currently active admin invitation code
+ * Requires admin role
+ */
+router.get(
+  "/admin-invitation-code",
+  authenticate,
+  requireAdmin,
+  async (_req: AuthRequest, res: Response): Promise<Response | void> => {
+    try {
+      const activeCode = await prisma.adminInvitationCode.findFirst({
+        where: {
+          isActive: true,
+        },
+        orderBy: { createdAt: "desc" },
+      });
+
+      return res.json({ code: activeCode?.code || null });
+    } catch (error) {
+      console.error("Fetch admin invitation code error:", error);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  }
+);
+
+/**
+ * POST /admin/admin-invites
+ * Create or refresh an admin invite for a specific @waikato.ac.nz email.
+ * Generates a secure token valid for 48 hours. Requires admin role.
+ */
+router.post(
+  "/admin-invites",
+  authenticate,
+  requireAdmin,
+  async (req: AuthRequest, res: Response): Promise<Response | void> => {
+    try {
+      const { email } = req.body as { email?: string };
+
+      if (!email || typeof email !== "string") {
+        return res.status(400).json({ error: "Email is required" });
+      }
+
+      const normalisedEmail = email.toLowerCase().trim();
+
+      if (!isWaikatoStaffEmail(normalisedEmail)) {
+        return res
+          .status(400)
+          .json({ error: "Admin invites must use a @waikato.ac.nz email" });
+      }
+
+      const code = crypto.randomBytes(16).toString("hex");
+      const codeHash = await bcrypt.hash(code, 10);
+      const expiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000);
+
+      const invite = await prisma.adminInvite.upsert({
+        where: { email: normalisedEmail },
+        update: {
+          code,
+          codeHash,
+          expiresAt,
+          usedAt: null,
+          createdById: req.userId!,
+        },
+        create: {
+          email: normalisedEmail,
+          code,
+          codeHash,
+          expiresAt,
+          createdById: req.userId!,
+        },
+      });
+
+      return res.status(201).json({
+        message: "Admin invite generated",
+        invite: {
+          email: invite.email,
+          code, // Return plain code once during pilot
+          expiresAt: invite.expiresAt,
+        },
+      });
+    } catch (error) {
+      console.error("Create admin invite error:", error);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  }
+);
+
+/**
+ * GET /admin/admin-invites/pending
+ * List pending (unused, unexpired) admin invites. Requires admin role.
+ */
+router.get(
+  "/admin-invites/pending",
+  authenticate,
+  requireAdmin,
+  async (_req: AuthRequest, res: Response): Promise<Response | void> => {
+    try {
+      const now = new Date();
+      const invites = await prisma.adminInvite.findMany({
+        where: {
+          usedAt: null,
+          expiresAt: {
+            gt: now,
+          },
+        },
+        select: {
+          email: true,
+          expiresAt: true,
+          createdAt: true,
+        },
+        orderBy: { createdAt: "desc" },
+      });
+
+      return res.json({ invites });
+    } catch (error) {
+      console.error("List admin invites error:", error);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  }
+);
+
+/**
  * POST /invitation-code
  * 
  * Create a new active invitation code
@@ -656,6 +784,50 @@ router.post(
       });
     } catch (error) {
       console.error("Create invitation code error:", error);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  }
+);
+
+/**
+ * POST /admin/admin-invitation-code
+ *
+ * Create a new active admin invitation code
+ * Automatically deactivates all previous active admin codes
+ * Requires admin role
+ */
+router.post(
+  "/admin-invitation-code",
+  authenticate,
+  requireAdmin,
+  async (req: AuthRequest, res: Response): Promise<Response | void> => {
+    try {
+      const { code } = req.body as { code?: string };
+
+      if (!code || typeof code !== "string" || code.trim().length === 0) {
+        return res.status(400).json({ error: "Code must be a non-empty string" });
+      }
+
+      const trimmedCode = code.trim();
+
+      await prisma.adminInvitationCode.updateMany({
+        where: { isActive: true },
+        data: { isActive: false },
+      });
+
+      const newCode = await prisma.adminInvitationCode.create({
+        data: {
+          code: trimmedCode,
+          isActive: true,
+        },
+      });
+
+      return res.status(201).json({
+        message: "New admin invitation code created",
+        invitationCode: newCode,
+      });
+    } catch (error) {
+      console.error("Create admin invitation code error:", error);
       return res.status(500).json({ error: "Internal server error" });
     }
   }
@@ -876,6 +1048,354 @@ router.post(
       });
     } catch (error) {
       console.error("Error creating match:", error);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  }
+);
+
+router.post(
+  "/matches/:matchId/cancel",
+  authenticate,
+  requireAdmin,
+  async (req: AuthRequest, res: Response): Promise<Response | void> => {
+    try {
+      const { matchId } = req.params;
+      const { reason } = req.body as { reason?: string };
+
+      const matchIdNum = parseInt(matchId, 10);
+      if (isNaN(matchIdNum)) {
+        return res.status(400).json({ error: "Invalid match ID" });
+      }
+
+      const match = await prisma.match.findUnique({
+        where: { id: matchIdNum },
+      });
+
+      if (!match) {
+        return res.status(404).json({ error: "Match not found" });
+      }
+
+      if (match.status === "completed") {
+        return res.status(400).json({ error: "Cannot cancel a completed match" });
+      }
+
+      if (match.status === "cancelled") {
+        return res.status(400).json({ error: "Match is already cancelled" });
+      }
+
+      if (!req.userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      await prisma.match.update({
+        where: { id: matchIdNum },
+        data: {
+          status: "cancelled",
+          cancelledAt: new Date(),
+          cancelledById: req.userId,
+          cancelReason: reason || null,
+        },
+      });
+
+      return res.json({ message: "Match cancelled successfully" });
+    } catch (error) {
+      console.error("Error cancelling match:", error);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  }
+);
+
+/**
+ * POST /admin/users
+ * Admin can create a new user manually (e.g., for staff onboarding).
+ * User is created with a temporary password and mustChangePassword flag.
+ * Requires admin role.
+ */
+router.post(
+  "/users",
+  authenticate,
+  requireAdmin,
+  async (req: AuthRequest, res: Response): Promise<Response | void> => {
+    try {
+      const { email, name, role } = req.body as {
+        email?: string;
+        name?: string;
+        role?: string;
+      };
+
+      if (!email || !name || !role) {
+        return res
+          .status(400)
+          .json({ error: "Email, name, and role are required" });
+      }
+
+      const normalizedEmail = email.toLowerCase().trim();
+
+      // Check if user already exists
+      const existingUser = await prisma.user.findUnique({
+        where: { email: normalizedEmail },
+      });
+
+      if (existingUser) {
+        return res.status(409).json({ error: "User with this email already exists" });
+      }
+
+      // Generate temporary password
+      const temporaryPassword = crypto.randomBytes(12).toString("hex");
+      const passwordHash = await bcrypt.hash(temporaryPassword, 10);
+
+      // Create user
+      const newUser = await prisma.user.create({
+        data: {
+          email: normalizedEmail,
+          name,
+          role: role as "student" | "alumni" | "admin",
+          passwordHash,
+          approvalStatus: role === "admin" ? "approved" : "pending",
+          mustChangePassword: true,
+          mentoringTypes: [],
+        },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          role: true,
+          approvalStatus: true,
+          createdAt: true,
+        },
+      });
+
+      return res.status(201).json({
+        message: "User created successfully",
+        user: newUser,
+        temporaryPassword, // Return once for admin to share
+      });
+    } catch (error) {
+      console.error("Error creating user:", error);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  }
+);
+
+/**
+ * POST /admin/users/:userId/reset-password
+ * Admin can reset a user's password to a temporary one.
+ * The user will be required to change it on next login.
+ * Requires admin role.
+ */
+router.post(
+  "/users/:userId/reset-password",
+  authenticate,
+  requireAdmin,
+  async (req: AuthRequest, res: Response): Promise<Response | void> => {
+    try {
+      const userId = parseInt(req.params.userId, 10);
+      if (isNaN(userId)) {
+        return res.status(400).json({ error: "Invalid user ID" });
+      }
+
+      // Check if user exists
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { id: true, email: true, name: true },
+      });
+
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      // Generate a temporary password
+      const temporaryPassword = crypto.randomBytes(12).toString("hex");
+      const passwordHash = await bcrypt.hash(temporaryPassword, 10);
+
+      // Update user password and set mustChangePassword flag
+      await prisma.user.update({
+        where: { id: userId },
+        data: {
+          passwordHash,
+          passwordUpdatedAt: new Date(),
+          mustChangePassword: true,
+        },
+      });
+
+      return res.json({
+        message: "Password reset successfully",
+        userId,
+        email: user.email,
+        temporaryPassword, // Return once for admin to share with user
+        userMustChangePassword: true,
+      });
+    } catch (error) {
+      console.error("Error resetting password:", error);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  }
+);
+
+/**
+ * GET /admin/admins
+ * List all admins with status information.
+ * Returns: id, name, email, isActive, passwordUpdatedAt, createdAt
+ * Requires admin role.
+ */
+router.get(
+  "/admins",
+  authenticate,
+  requireAdmin,
+  async (req: AuthRequest, res: Response): Promise<Response | void> => {
+    try {
+      const admins = await prisma.user.findMany({
+        where: { role: "admin" },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          isActive: true,
+          passwordUpdatedAt: true,
+          createdAt: true,
+        },
+        orderBy: { email: "asc" },
+      });
+
+      return res.json({ admins });
+    } catch (error) {
+      console.error("Error listing admins:", error);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  }
+);
+
+/**
+ * POST /admin/admins/:adminId/deactivate
+ * Deactivate an admin account (prevent login).
+ * Prevents deactivating the last active admin.
+ * Requires admin role.
+ */
+router.post(
+  "/admins/:adminId/deactivate",
+  authenticate,
+  requireAdmin,
+  async (req: AuthRequest, res: Response): Promise<Response | void> => {
+    try {
+      const adminId = parseInt(req.params.adminId, 10);
+      if (isNaN(adminId)) {
+        return res.status(400).json({ error: "Invalid admin ID" });
+      }
+
+      // Check if requesting admin is trying to deactivate another admin
+      if (adminId !== req.userId) {
+        return res.status(403).json({ error: "You can only deactivate your own account." });
+      }
+
+      // Verify target admin exists and has admin role
+      const targetAdmin = await prisma.user.findUnique({
+        where: { id: adminId },
+        select: { id: true, role: true, isActive: true, email: true },
+      });
+
+      if (!targetAdmin) {
+        return res.status(404).json({ error: "Admin not found" });
+      }
+
+      if (targetAdmin.role !== "admin") {
+        return res.status(400).json({ error: "User is not an admin" });
+      }
+
+      // Check if this is the last active admin
+      const activeAdminsCount = await prisma.user.count({
+        where: { role: "admin", isActive: true },
+      });
+
+      if (activeAdminsCount <= 1 && targetAdmin.isActive) {
+        return res
+          .status(403)
+          .json({ error: "Cannot deactivate the last active admin." });
+      }
+
+      // Deactivate the admin
+      const updatedAdmin = await prisma.user.update({
+        where: { id: adminId },
+        data: {
+          isActive: false,
+          deactivatedAt: new Date(),
+          deactivatedById: req.userId!,
+        },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          isActive: true,
+          passwordUpdatedAt: true,
+          createdAt: true,
+        },
+      });
+
+      return res.json({
+        message: "Admin deactivated successfully",
+        admin: updatedAdmin,
+      });
+    } catch (error) {
+      console.error("Error deactivating admin:", error);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  }
+);
+
+/**
+ * POST /admin/admins/:adminId/reactivate
+ * Reactivate a deactivated admin account.
+ * Requires admin role.
+ */
+router.post(
+  "/admins/:adminId/reactivate",
+  authenticate,
+  requireAdmin,
+  async (req: AuthRequest, res: Response): Promise<Response | void> => {
+    try {
+      const adminId = parseInt(req.params.adminId, 10);
+      if (isNaN(adminId)) {
+        return res.status(400).json({ error: "Invalid admin ID" });
+      }
+
+      // Prevent self-reactivation
+      if (adminId === req.userId) {
+        return res.status(403).json({ error: "You cannot reactivate your own account. Ask another admin." });
+      }
+
+      // Verify target admin exists and has admin role
+      const targetAdmin = await prisma.user.findUnique({
+        where: { id: adminId },
+        select: { id: true, role: true, email: true },
+      });
+
+      if (!targetAdmin) {
+        return res.status(404).json({ error: "Admin not found" });
+      }
+
+      if (targetAdmin.role !== "admin") {
+        return res.status(400).json({ error: "User is not an admin" });
+      }
+
+      // Reactivate the admin
+      const updatedAdmin = await prisma.user.update({
+        where: { id: adminId },
+        data: { isActive: true },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          isActive: true,
+          passwordUpdatedAt: true,
+          createdAt: true,
+        },
+      });
+
+      return res.json({
+        message: "Admin reactivated successfully",
+        admin: updatedAdmin,
+      });
+    } catch (error) {
+      console.error("Error reactivating admin:", error);
       return res.status(500).json({ error: "Internal server error" });
     }
   }

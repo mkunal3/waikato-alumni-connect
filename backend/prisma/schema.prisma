@@ -7,6 +7,11 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum VerificationPurpose {
+  EMAIL_VERIFICATION
+  PASSWORD_RESET
+}
+
 model User {
   id                 Int       @id @default(autoincrement())
   email              String    @unique
@@ -15,13 +20,19 @@ model User {
   createdAt          DateTime  @default(now())
   approvalStatus     String    @default("pending")
   passwordHash       String
+  isActive           Boolean   @default(true)
+  mustChangePassword Boolean   @default(false)
+  passwordUpdatedAt  DateTime? @default(now())
+  deactivatedAt      DateTime?
+  deactivatedById    Int?
+  deactivationReason String?
   currentCompany     String?
   currentPosition    String?
   degree             String?
   graduationYear     Int?
-  mentoringGoals     String[]
-  skillsOffered      String[]
-  skillsWanted       String[]
+  mentoringGoals     String[]  @default([])
+  skillsOffered      String[]  @default([])
+  skillsWanted       String[]  @default([])
   studentId          String?
   yearOfStudy        Int?
   academicFocus      String?
@@ -34,19 +45,26 @@ model User {
   linkedInUrl        String?
   githubUrl          String?
   portfolioUrl       String?
+  profilePhotoFileName   String?
+  profilePhotoFilePath   String?
+  profilePhotoUploadedAt DateTime?
   gpa                String?
-  languages          String[]
-  interests          String[]
+  languages          String[]  @default([])
+  interests          String[]  @default([])
   workExperience     Json?
   projects           Json?
   certifications     Json?
   contactEmail       String?
-  mentoringTypes     String[]  // For alumni: types they support (oneOff, vocational, employment)
+  mentoringTypes     String[]  @default([]) // For alumni: types they support (oneOff, vocational, employment)
   preferredMentoringType String? // For students: their preferred type
   alumniMatches      Match[]   @relation("AlumniMatches")
   confirmedMatches   Match[]   @relation("ConfirmedMatches")
   studentMatches     Match[]   @relation("StudentMatches")
+  cancelledMatches   Match[]   @relation("CancelledBy")
   sentMessages       Message[]
+  deactivatedBy      User?     @relation("UserDeactivations", fields: [deactivatedById], references: [id], onDelete: SetNull)
+  deactivatedUsers   User[]    @relation("UserDeactivations")
+  createdAdminInvites AdminInvite[] @relation("UserAdminInvites")
 }
 
 model Match {
@@ -59,13 +77,32 @@ model Match {
   coverLetter   String?
   confirmedById Int?
   confirmedAt   DateTime?
+  cancelReason  String?
+  cancelledAt   DateTime?
+  cancelledById Int?
   createdAt     DateTime  @default(now())
   alumni        User      @relation("AlumniMatches", fields: [alumniId], references: [id], onDelete: Cascade)
   confirmedBy   User?     @relation("ConfirmedMatches", fields: [confirmedById], references: [id])
+  cancelledBy   User?     @relation("CancelledBy", fields: [cancelledById], references: [id])
   student       User      @relation("StudentMatches", fields: [studentId], references: [id], onDelete: Cascade)
   messages      Message[]
 
   @@unique([studentId, alumniId])
+}
+
+model AdminInvite {
+  id          Int       @id @default(autoincrement())
+  email       String    @unique
+  code        String
+  codeHash    String?
+  expiresAt   DateTime
+  usedAt      DateTime?
+  createdAt   DateTime  @default(now())
+  createdById Int
+  createdBy   User      @relation("UserAdminInvites", fields: [createdById], references: [id], onDelete: Cascade)
+
+  @@index([email])
+  @@index([expiresAt])
 }
 
 model Message {
@@ -85,15 +122,26 @@ model EmailVerification {
   id        Int       @id @default(autoincrement())
   email     String
   code      String
+  purpose   VerificationPurpose
   expiresAt DateTime
   usedAt    DateTime?
   createdAt DateTime  @default(now())
 
   @@index([email])
   @@index([expiresAt])
+  @@index([email, purpose])
+  @@unique([email, purpose])
 }
 
 model InvitationCode {
+  id        Int      @id @default(autoincrement())
+  code      String   @unique
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model AdminInvitationCode {
   id        Int      @id @default(autoincrement())
   code      String   @unique
   isActive  Boolean  @default(true)

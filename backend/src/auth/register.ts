@@ -8,6 +8,13 @@ const router = Router();
 // TypeScript types for role validation
 type UserRole = "student" | "alumni";
 
+// Minimal helpers for domain checks
+const isWaikatoStudentEmail = (email: string): boolean =>
+  email.toLowerCase().trim().endsWith("@students.waikato.ac.nz");
+
+const isWaikatoStaffEmail = (email: string): boolean =>
+  email.toLowerCase().trim().endsWith("@waikato.ac.nz");
+
 // Note: send-verification-code route is handled by sendVerificationCode.ts
 // This file only handles registration
 
@@ -145,7 +152,7 @@ router.post(
         });
       }
 
-      if (role === "student" && !normalisedEmail.endsWith("@students.waikato.ac.nz")) {
+      if (role === "student" && !isWaikatoStudentEmail(normalisedEmail)) {
         return res.status(400).json({
           error: "Students must use their @students.waikato.ac.nz email address",
         });
@@ -202,6 +209,7 @@ router.post(
           where: {
             email: normalisedEmail,
             code: verificationCode.trim(),
+            purpose: "EMAIL_VERIFICATION",
             usedAt: null,
             expiresAt: {
               gt: new Date(), // Not expired
@@ -248,7 +256,7 @@ router.post(
         }
       }
 
-      // 8. Handle alumni-specific validation
+      // 8. Handle role-specific validation
       let approvalStatus = "pending";
 
       if (role === "alumni") {
@@ -291,6 +299,7 @@ router.post(
           role,
           approvalStatus,
           studentId: role === "student" && studentId ? studentId.trim() : null,
+          mentoringTypes: [],
         },
         select: {
           id: true,

@@ -88,15 +88,31 @@ router.post(
       const trimmedCode = inviteCode.trim();
       const adminInvite = await prisma.adminInvite.findUnique({
         where: { email: normalisedEmail },
+        select: {
+          id: true,
+          email: true,
+          code: true,
+          codeHash: true,
+          expiresAt: true,
+          usedAt: true,
+        },
       });
 
       if (!adminInvite) {
         return res.status(404).json({ error: "No invitation found for this email" });
       }
 
-      // 7. Check if invite code matches
-      if (adminInvite.code !== trimmedCode) {
-        return res.status(400).json({ error: "Invalid invitation code" });
+      // 7. Check if invite code matches (prefer hashed comparison when available)
+      const hasHash = !!adminInvite.codeHash;
+      if (hasHash) {
+        const isValid = await bcrypt.compare(trimmedCode, adminInvite.codeHash!);
+        if (!isValid) {
+          return res.status(400).json({ error: "Invalid invitation code" });
+        }
+      } else {
+        if (adminInvite.code !== trimmedCode) {
+          return res.status(400).json({ error: "Invalid invitation code" });
+        }
       }
 
       // 8. Check if invite has been used
@@ -124,6 +140,7 @@ router.post(
             passwordUpdatedAt: new Date(),
             role: "admin",
             approvalStatus: "approved",
+            mentoringTypes: [],
           },
           select: {
             id: true,

@@ -1401,4 +1401,127 @@ router.post(
   }
 );
 
+/**
+ * POST /admin/users/:userId/deactivate
+ * Deactivate any user account (students, alumni, or admins).
+ * Prevents self-deactivation.
+ * Body: { reason?: string }
+ * Requires admin role.
+ */
+router.post(
+  "/users/:userId/deactivate",
+  authenticate,
+  requireAdmin,
+  async (req: AuthRequest, res: Response): Promise<Response | void> => {
+    try {
+      const userId = parseInt(req.params.userId, 10);
+      if (isNaN(userId)) {
+        return res.status(400).json({ error: "Invalid user ID" });
+      }
+
+      // Prevent self-deactivation
+      if (userId === req.userId) {
+        return res.status(400).json({ error: "You cannot deactivate your own account." });
+      }
+
+      // Verify target user exists
+      const targetUser = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { id: true, role: true, isActive: true, email: true },
+      });
+
+      if (!targetUser) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      // Extract optional reason from body
+      const { reason } = req.body as { reason?: string };
+      const trimmedReason = reason && typeof reason === "string" ? reason.trim() : null;
+
+      // Deactivate the user
+      const updatedUser = await prisma.user.update({
+        where: { id: userId },
+        data: {
+          isActive: false,
+          deactivatedAt: new Date(),
+          deactivatedById: req.userId!,
+          deactivationReason: trimmedReason,
+        },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          role: true,
+          isActive: true,
+          deactivatedAt: true,
+          deactivationReason: true,
+        },
+      });
+
+      return res.json({
+        message: "User deactivated successfully",
+        user: updatedUser,
+      });
+    } catch (error) {
+      console.error("Error deactivating user:", error);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  }
+);
+
+/**
+ * POST /admin/users/:userId/reactivate
+ * Reactivate a deactivated user account.
+ * Requires admin role (any admin can reactivate any user).
+ */
+router.post(
+  "/users/:userId/reactivate",
+  authenticate,
+  requireAdmin,
+  async (req: AuthRequest, res: Response): Promise<Response | void> => {
+    try {
+      const userId = parseInt(req.params.userId, 10);
+      if (isNaN(userId)) {
+        return res.status(400).json({ error: "Invalid user ID" });
+      }
+
+      // Verify target user exists
+      const targetUser = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { id: true, role: true, email: true },
+      });
+
+      if (!targetUser) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      // Reactivate the user
+      const updatedUser = await prisma.user.update({
+        where: { id: userId },
+        data: {
+          isActive: true,
+          deactivatedAt: null,
+          deactivatedById: null,
+          deactivationReason: null,
+        },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          role: true,
+          isActive: true,
+        },
+      });
+
+      return res.json({
+        message: "User reactivated successfully",
+        user: updatedUser,
+      });
+    } catch (error) {
+      console.error("Error reactivating user:", error);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  }
+);
+
 export default router;

@@ -56,11 +56,12 @@ router.get(
         return res.status(403).json({ error: "Your account must be approved before you can browse mentors" });
       }
 
-      // 3) Fetch all approved alumni mentors
+      // 3) Fetch all approved alumni mentors (only active)
       const mentors = await prisma.user.findMany({
         where: {
           role: "alumni",
           approvalStatus: "approved",
+          isActive: true,
         },
         select: {
           id: true,
@@ -244,11 +245,12 @@ router.get(
           .json({ error: "User is not a student" });
       }
 
-      // 4) Fetch all approved alumni mentors
+      // 4) Fetch all approved alumni mentors (only active)
       const mentors = await prisma.user.findMany({
         where: {
           role: "alumni",
           approvalStatus: "approved",
+          isActive: true,
         },
         select: {
           id: true,
@@ -392,6 +394,10 @@ router.post(
 
       if (alumni.approvalStatus !== "approved") {
         return res.status(400).json({ error: "Alumni mentor account is not approved" });
+      }
+
+      if (!alumni.isActive) {
+        return res.status(400).json({ error: "Alumni mentor account is inactive" });
       }
 
       // 5) Check if match already exists

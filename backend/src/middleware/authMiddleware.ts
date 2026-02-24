@@ -99,7 +99,8 @@ export const requireActiveUser = async (
 
     if (!user || !user.isActive) {
       res.status(403).json({
-        error: "Your account is inactive. Please contact an administrator.",
+        error: "ACCOUNT_INACTIVE",
+        message: "Your account is inactive. Please contact an administrator.",
       });
       return;
     }

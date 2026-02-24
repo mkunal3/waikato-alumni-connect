@@ -27,16 +27,20 @@ router.post(
       // IMPORTANT:
       // Use an explicit `select` to avoid Prisma querying columns that may not
       // exist yet in environments where migrations haven't been applied.
+      const normalisedEmail = email.toLowerCase().trim();
+
       const user = await prisma.user.findUnique({
-        where: { email },
+        where: { email: normalisedEmail },
         select: {
           id: true,
           name: true,
           email: true,
           role: true,
           approvalStatus: true,
+          isActive: true,
           createdAt: true,
           passwordHash: true,
+          passwordUpdatedAt: true,
         },
       });
       if (!user) {
@@ -69,10 +73,29 @@ router.post(
           .json({ error: "Invalid email or password" });
       }
 
-      // 4) Allow all users to login (students can login even if pending approval)
-      // Approval status checks will be handled at the feature level (e.g., browse mentors)
+      // 4) Enforce approval gating for students only
+      // (Alumni registered via invite code are auto-approved, admins bypass this check)
+      if (user.role === "student" && user.approvalStatus !== "approved") {
+        if (user.approvalStatus === "pending") {
+          return res.status(403).json({
+            error: "Your account is pending approval. Please wait for admin approval.",
+          });
+        } else {
+          return res.status(403).json({
+            error: "Your account is not approved. Please contact support.",
+          });
+        }
+      }
 
-      // 5) Generate JWT
+      // 5) Check if user account is active (applies to all roles including admin)
+      if (!user.isActive) {
+        return res.status(403).json({
+          error: "ACCOUNT_INACTIVE",
+          message: "Your account has been deactivated. Please contact support.",
+        });
+      }
+
+      // 6) Generate JWT
       const jwtSecret = process.env.JWT_SECRET;
       if (!jwtSecret) {
         console.error("JWT secret is not configured");
@@ -87,7 +110,7 @@ router.post(
         { expiresIn: "1h" }
       );
 
-      // 6) Remove password hash from response
+      // 7) Remove password hash from response
       const { passwordHash, ...userWithoutPassword } = user;
 
       return res.json({
@@ -122,6 +145,7 @@ router.get(
           role: true,
           approvalStatus: true,
           createdAt: true,
+          passwordUpdatedAt: true,
         },
       });
 

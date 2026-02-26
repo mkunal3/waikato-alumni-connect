@@ -9,6 +9,7 @@ export function AlumniRegisterPage() {
   
   const [formData, setFormData] = useState({
     invitationCode: '',
+    fullName: '',
     email: '',
     password: '',
     confirmPassword: ''
@@ -33,6 +34,11 @@ export function AlumniRegisterPage() {
     // Validation
     if (!formData.invitationCode.trim()) {
       setError('Invitation code is required');
+      return;
+    }
+
+    if (!formData.fullName.trim()) {
+      setError('Full name is required');
       return;
     }
 
@@ -81,6 +87,7 @@ export function AlumniRegisterPage() {
           method: 'POST',
           body: JSON.stringify({
             invitationCode: formData.invitationCode,
+            fullName: formData.fullName.trim(),
             email: formData.email,
             password: formData.password,
             role: 'alumni'
@@ -139,6 +146,24 @@ export function AlumniRegisterPage() {
                   value={formData.invitationCode}
                   onChange={handleChange}
                   placeholder="Enter your invitation code"
+                  style={{ width: '100%', padding: '12px 16px', border: '1px solid #D1D5DB', borderRadius: '8px', outline: 'none' }}
+                  required
+                  disabled={isLoading}
+                />
+              </div>
+
+              {/* Full Name */}
+              <div>
+                <label htmlFor="fullName" style={{ display: 'block', color: '#4B5563', marginBottom: '8px', fontWeight: '500' }}>
+                  Full Name *
+                </label>
+                <input
+                  type="text"
+                  id="fullName"
+                  name="fullName"
+                  value={formData.fullName}
+                  onChange={handleChange}
+                  placeholder="e.g., Your Name"
                   style={{ width: '100%', padding: '12px 16px', border: '1px solid #D1D5DB', borderRadius: '8px', outline: 'none' }}
                   required
                   disabled={isLoading}

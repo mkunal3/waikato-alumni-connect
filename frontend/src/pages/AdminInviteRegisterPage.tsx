@@ -7,6 +7,7 @@ import { apiRequest, API_ENDPOINTS } from '../config/api';
 export function AdminInviteRegisterPage() {
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
+  const [fullName, setFullName] = useState('');
   const [inviteCode, setInviteCode] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -14,6 +15,7 @@ export function AdminInviteRegisterPage() {
   const [isLoading, setIsLoading] = useState(false);
 
   const validate = () => {
+    if (!fullName.trim()) return 'Full name is required';
     if (!email.trim()) return 'Email is required';
     if (!email.toLowerCase().endsWith('@waikato.ac.nz')) return 'Email must end with @waikato.ac.nz';
     if (!inviteCode.trim()) return 'Invitation code is required';
@@ -37,11 +39,10 @@ export function AdminInviteRegisterPage() {
     setError(null);
 
     try {
-      const derivedName = email.split('@')[0] || 'Admin User';
       await apiRequest(API_ENDPOINTS.registerAdmin, {
         method: 'POST',
         body: JSON.stringify({
-          name: derivedName,
+          fullName: fullName.trim(),
           email: email.trim(),
           password,
           inviteCode: inviteCode.trim(),
@@ -82,6 +83,22 @@ export function AdminInviteRegisterPage() {
             )}
 
             <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div>
+                <label htmlFor="fullName" style={{ display: 'block', color: '#4B5563', marginBottom: '6px', fontWeight: 500 }}>
+                  Full Name *
+                </label>
+                <input
+                  type="text"
+                  id="fullName"
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  placeholder="e.g., Your Name"
+                  style={{ width: '100%', padding: '12px 14px', border: '1px solid #D1D5DB', borderRadius: '8px', outline: 'none' }}
+                  required
+                  disabled={isLoading}
+                />
+              </div>
+
               <div>
                 <label htmlFor="email" style={{ display: 'block', color: '#4B5563', marginBottom: '6px', fontWeight: 500 }}>
                   Staff Email *

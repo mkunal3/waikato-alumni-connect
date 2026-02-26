@@ -310,7 +310,7 @@ export function StudentRegisterPage() {
                 </button>
                 {codeSent && (
                   <p style={{ marginTop: '6px', fontSize: '12px', color: '#10B981' }}>
-                    Verification code sent! Please check your email.
+                    Verification code generated. Please contact the administrator to obtain your code.
                   </p>
                 )}
               </div>

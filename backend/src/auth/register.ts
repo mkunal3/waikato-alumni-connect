@@ -1,5 +1,6 @@
 import bcrypt from "bcryptjs";
 import { Router, Request, Response } from "express";
+import { Prisma } from "@prisma/client";
 
 import prisma from "../prisma";
 
@@ -14,6 +15,17 @@ const isWaikatoStudentEmail = (email: string): boolean =>
 
 const isWaikatoStaffEmail = (email: string): boolean =>
   email.toLowerCase().trim().endsWith("@waikato.ac.nz");
+
+const formatNameFromEmail = (email: string): string => {
+  const local = email.split("@")[0] || "";
+  const words = local
+    .replace(/[._-]+/g, " ")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1));
+  return words.join(" ") || "Alumni";
+};
 
 // Note: send-verification-code route is handled by sendVerificationCode.ts
 // This file only handles registration
@@ -103,11 +115,19 @@ router.post(
   "/register",
   async (req: Request, res: Response): Promise<Response | void> => {
     try {
+      if (!process.env.DATABASE_URL) {
+        console.error("Registration error: DATABASE_URL is not configured");
+        return res
+          .status(500)
+          .json({ error: "Server configuration error: database not available" });
+      }
+
       const {
         email,
         password,
         role,
         invitationCode,
+        fullName,
         name,
         studentId,
         verificationCode,
@@ -116,6 +136,7 @@ router.post(
         password?: string;
         role?: UserRole;
         invitationCode?: string;
+        fullName?: string;
         name?: string;
         studentId?: string;
         verificationCode?: string;
@@ -128,11 +149,18 @@ router.post(
         });
       }
 
+      const trimmedFullName = (typeof fullName === "string" ? fullName : "").trim();
+      const trimmedName = (typeof name === "string" ? name : "").trim();
+
       // 1.1. For students, studentId is required
       if (role === "student" && !studentId) {
         return res.status(400).json({
           error: "Student ID is required for student registration",
         });
+      }
+
+      if (role === "alumni" && !trimmedFullName) {
+        return res.status(400).json({ error: "Full name is required." });
       }
 
       // 2. Normalize email (trim + lowercase)
@@ -288,7 +316,10 @@ router.post(
       const passwordHash = await bcrypt.hash(password, 10);
 
       // 10. Determine user name (fallback to email prefix if not provided)
-      const displayName = name || normalisedEmail.split("@")[0];
+      const displayName =
+        role === "alumni"
+          ? trimmedFullName || formatNameFromEmail(normalisedEmail)
+          : trimmedName || normalisedEmail.split("@")[0];
 
       // 11. Create user
       const newUser = await prisma.user.create({
@@ -317,7 +348,23 @@ router.post(
         user: newUser,
       });
     } catch (error) {
-      console.error("Registration error:", error);
+      if (error instanceof Prisma.PrismaClientKnownRequestError) {
+        if (error.code === "P2002") {
+          return res.status(400).json({ error: "User already exists" });
+        }
+        if (error.code === "P2025") {
+          return res.status(400).json({ error: "Related record not found" });
+        }
+      }
+
+      if (error instanceof Prisma.PrismaClientInitializationError) {
+        console.error("Registration error: Prisma failed to initialize", error);
+        return res
+          .status(500)
+          .json({ error: "Server configuration error: database unavailable" });
+      }
+
+      console.error("Registration error (student/alumni):", error);
       return res.status(500).json({ error: "Internal server error" });
     }
   }

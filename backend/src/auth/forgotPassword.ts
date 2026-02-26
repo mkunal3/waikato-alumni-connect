@@ -65,7 +65,7 @@ router.post(
 
       if (user) {
         const code = generateResetCode();
-        const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
+        const expiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000);
 
         await prisma.emailVerification.upsert({
           where: {

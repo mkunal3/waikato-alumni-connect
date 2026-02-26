@@ -163,6 +163,116 @@ const DATE_MONTHS = [
   'July', 'August', 'September', 'October', 'November', 'December'
 ];
 
+const getDateValue = (dateStr: string | undefined | null): number | null => {
+  if (!dateStr) return null;
+  const parts = dateStr.trim().split(' ').filter(Boolean);
+  if (parts.length === 0) return null;
+
+  let monthIndex = 0;
+  let yearStr = '';
+
+  if (parts.length === 2 && DATE_MONTHS.includes(parts[0])) {
+    monthIndex = DATE_MONTHS.indexOf(parts[0]);
+    yearStr = parts[1];
+  } else if (parts.length === 1) {
+    if (DATE_MONTHS.includes(parts[0])) {
+      monthIndex = DATE_MONTHS.indexOf(parts[0]);
+      yearStr = '';
+    } else {
+      yearStr = parts[0];
+    }
+  }
+
+  const yearNum = parseInt(yearStr, 10);
+  if (!yearStr || Number.isNaN(yearNum)) return null;
+  return yearNum * 12 + monthIndex;
+};
+
+const parseDateParts = (dateStr: string | undefined | null): { month: number | null; year: number | null } => {
+  if (!dateStr) return { month: null, year: null };
+  const parts = dateStr.trim().split(' ').filter(Boolean);
+  if (parts.length === 0) return { month: null, year: null };
+
+  let month: number | null = null;
+  let year: number | null = null;
+
+  if (parts.length === 2 && DATE_MONTHS.includes(parts[0])) {
+    month = DATE_MONTHS.indexOf(parts[0]) + 1;
+    year = parseInt(parts[1], 10);
+  } else if (parts.length === 1) {
+    if (DATE_MONTHS.includes(parts[0])) {
+      month = DATE_MONTHS.indexOf(parts[0]) + 1;
+    } else if (/^\d{4}$/.test(parts[0])) {
+      year = parseInt(parts[0], 10);
+    }
+  }
+
+  if (Number.isNaN(year)) {
+    year = null;
+  }
+
+  return { month, year };
+};
+
+const validateDateRange = (
+  startMonth: number | null,
+  startYear: number | null,
+  endMonth: number | null,
+  endYear: number | null,
+  isCurrent = false
+): string | null => {
+  if (isCurrent) return null;
+  if (endMonth === null || endYear === null) return null;
+  if (startYear === null) return null;
+
+  const startValue = startYear * 12 + ((startMonth ?? 1) - 1);
+  const endValue = endYear * 12 + ((endMonth ?? 1) - 1);
+
+  if (endValue < startValue) {
+    return 'End date must be the same as or later than start date.';
+  }
+
+  return null;
+};
+
+const isWorkExperienceDateInvalid = (exp: { startDate: string; endDate: string; current: boolean; }): boolean => {
+  if (exp.current) return false;
+
+  const startParts = parseDateParts(exp.startDate);
+  const endParts = parseDateParts(exp.endDate);
+
+  // Require both dates when not marked current
+  if (startParts.year === null || endParts.year === null) return true;
+
+  const error = validateDateRange(startParts.month, startParts.year, endParts.month, endParts.year);
+  return Boolean(error);
+};
+
+const isProjectDateInvalid = (proj: { startDate: string; endDate: string; }): boolean => {
+  if (!proj.endDate) return false; // End date optional; only validate when provided
+
+  const startParts = parseDateParts(proj.startDate);
+  const endParts = parseDateParts(proj.endDate);
+
+  // Require start date if end date is provided
+  if (startParts.year === null || endParts.year === null) return true;
+
+  const error = validateDateRange(startParts.month, startParts.year, endParts.month, endParts.year);
+  return Boolean(error);
+};
+
+const isCertificationDateInvalid = (cert: { issueDate: string; expiryDate: string; }): boolean => {
+  if (!cert.expiryDate) return false; // Expiry optional
+
+  const startParts = parseDateParts(cert.issueDate);
+  const endParts = parseDateParts(cert.expiryDate);
+
+  if (startParts.year === null || endParts.year === null) return true;
+
+  const error = validateDateRange(startParts.month, startParts.year, endParts.month, endParts.year);
+  return Boolean(error);
+};
+
 interface AutocompleteInputProps {
   value: string;
   onChange: (value: string) => void;
@@ -318,6 +428,9 @@ export function StudentProfilePage() {
   
   // Track raw technology text for each project (for comfortable typing with commas/spaces)
   const [projectTechRawText, setProjectTechRawText] = useState<Map<string, string>>(new Map());
+  const [invalidWorkDateIds, setInvalidWorkDateIds] = useState<Set<string>>(new Set());
+  const [invalidProjectDateIds, setInvalidProjectDateIds] = useState<Set<string>>(new Set());
+  const [invalidCertificationDateIds, setInvalidCertificationDateIds] = useState<Set<string>>(new Set());
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -538,6 +651,36 @@ export function StudentProfilePage() {
     }
   }, [graduationYear, graduationMonth]);
 
+  useEffect(() => {
+    const invalidIds = new Set<string>();
+    formData.workExperience.forEach((exp) => {
+      if (isWorkExperienceDateInvalid(exp)) {
+        invalidIds.add(exp.id);
+      }
+    });
+    setInvalidWorkDateIds(invalidIds);
+  }, [formData.workExperience]);
+
+  useEffect(() => {
+    const invalidIds = new Set<string>();
+    formData.projects.forEach((proj) => {
+      if (isProjectDateInvalid(proj)) {
+        invalidIds.add(proj.id);
+      }
+    });
+    setInvalidProjectDateIds(invalidIds);
+  }, [formData.projects]);
+
+  useEffect(() => {
+    const invalidIds = new Set<string>();
+    formData.certifications.forEach((cert) => {
+      if (isCertificationDateInvalid(cert)) {
+        invalidIds.add(cert.id);
+      }
+    });
+    setInvalidCertificationDateIds(invalidIds);
+  }, [formData.certifications]);
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({
@@ -643,6 +786,12 @@ export function StudentProfilePage() {
       window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
+
+    if (invalidWorkDateIds.has(id)) {
+      setError('End date must be the same as or later than start date. Please fix highlighted entries.');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
     
     // Mark as saved
     setSavedWorkExperienceIds(prev => new Set([...prev, id]));
@@ -667,12 +816,38 @@ export function StudentProfilePage() {
   };
 
   const handleUpdateWorkExperience = (id: string, field: string, value: any) => {
-    setFormData(prev => ({
-      ...prev,
-      workExperience: prev.workExperience.map(exp =>
-        exp.id === id ? { ...exp, [field]: value } : exp
-      )
-    }));
+    setFormData(prev => {
+      const updatedWork = prev.workExperience.map(exp => {
+        if (exp.id !== id) return exp;
+
+        let nextExp = { ...exp, [field]: value };
+
+        // If toggling current job on, clear endDate and mark as ongoing
+        if (field === 'current' && value) {
+          nextExp.endDate = '';
+        }
+
+        // Auto-fix if start date is set after an existing end date
+        const startValue = getDateValue(nextExp.startDate);
+        const endValue = getDateValue(nextExp.endDate);
+        if (!nextExp.current && startValue !== null && endValue !== null && startValue > endValue) {
+          nextExp = { ...nextExp, endDate: nextExp.startDate };
+        }
+
+        return nextExp;
+      });
+
+      // Recompute invalid ranges after update
+      const invalidIds = new Set<string>();
+      updatedWork.forEach((exp) => {
+        if (isWorkExperienceDateInvalid(exp)) {
+          invalidIds.add(exp.id);
+        }
+      });
+      setInvalidWorkDateIds(invalidIds);
+
+      return { ...prev, workExperience: updatedWork };
+    });
   };
 
   const handleRemoveWorkExperience = (id: string) => {
@@ -721,6 +896,12 @@ export function StudentProfilePage() {
       window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
+
+    if (invalidProjectDateIds.has(id)) {
+      setError('End date must be the same as or later than start date. Please fix highlighted entries.');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
     
     // Mark as saved
     setSavedProjectIds(prev => new Set([...prev, id]));
@@ -745,12 +926,32 @@ export function StudentProfilePage() {
   };
 
   const handleUpdateProject = (id: string, field: string, value: any) => {
-    setFormData(prev => ({
-      ...prev,
-      projects: prev.projects.map(proj =>
-        proj.id === id ? { ...proj, [field]: value } : proj
-      )
-    }));
+    setFormData(prev => {
+      const updatedProjects = prev.projects.map(proj => {
+        if (proj.id !== id) return proj;
+
+        let nextProj = { ...proj, [field]: value };
+
+        // Auto-fix if start date moves past current end date
+        const startValue = getDateValue(nextProj.startDate);
+        const endValue = getDateValue(nextProj.endDate);
+        if (field === 'startDate' && endValue !== null && startValue !== null && startValue > endValue) {
+          nextProj = { ...nextProj, endDate: nextProj.startDate };
+        }
+
+        return nextProj;
+      });
+
+      const invalidIds = new Set<string>();
+      updatedProjects.forEach((proj) => {
+        if (isProjectDateInvalid(proj)) {
+          invalidIds.add(proj.id);
+        }
+      });
+      setInvalidProjectDateIds(invalidIds);
+
+      return { ...prev, projects: updatedProjects };
+    });
   };
 
   const handleRemoveProject = (id: string) => {
@@ -799,6 +1000,12 @@ export function StudentProfilePage() {
       window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
+
+    if (invalidCertificationDateIds.has(id)) {
+      setError('End date must be the same as or later than start date. Please fix highlighted entries.');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
     
     // Mark as saved
     setSavedCertificationIds(prev => new Set([...prev, id]));
@@ -823,12 +1030,37 @@ export function StudentProfilePage() {
   };
 
   const handleUpdateCertification = (id: string, field: string, value: any) => {
-    setFormData(prev => ({
-      ...prev,
-      certifications: prev.certifications.map(cert =>
-        cert.id === id ? { ...cert, [field]: value } : cert
-      )
-    }));
+    setFormData(prev => {
+      const updatedCerts = prev.certifications.map(cert => {
+        if (cert.id !== id) return cert;
+
+        let nextCert = { ...cert, [field]: value };
+
+        const startValue = getDateValue(nextCert.issueDate);
+        const endValue = getDateValue(nextCert.expiryDate);
+
+        // Auto-fix if start moves past expiry or expiry set before start
+        if (startValue !== null && endValue !== null && startValue > endValue) {
+          if (field === 'issueDate') {
+            nextCert = { ...nextCert, expiryDate: nextCert.issueDate };
+          } else if (field === 'expiryDate') {
+            nextCert = { ...nextCert, expiryDate: nextCert.issueDate };
+          }
+        }
+
+        return nextCert;
+      });
+
+      const invalidIds = new Set<string>();
+      updatedCerts.forEach((cert) => {
+        if (isCertificationDateInvalid(cert)) {
+          invalidIds.add(cert.id);
+        }
+      });
+      setInvalidCertificationDateIds(invalidIds);
+
+      return { ...prev, certifications: updatedCerts };
+    });
   };
 
   const handleRemoveCertification = (id: string) => {
@@ -864,6 +1096,12 @@ export function StudentProfilePage() {
 
     if (formData.academicFocus && !ACADEMIC_FOCUS_OPTIONS.includes(formData.academicFocus)) {
       setError('Please select a valid academic focus from the dropdown options');
+      setSaving(false);
+      return;
+    }
+
+    if (invalidWorkDateIds.size > 0 || invalidProjectDateIds.size > 0 || invalidCertificationDateIds.size > 0) {
+      setError('End date must be the same as or later than start date. Please fix highlighted entries.');
       setSaving(false);
       return;
     }
@@ -1879,6 +2117,20 @@ export function StudentProfilePage() {
               }
 
               // Full form view (editing or newly added)
+              const workStartParts = parseDateParts(exp.startDate);
+              const workEndParts = parseDateParts(exp.endDate);
+              const workStartMonthValue = workStartParts.month ? DATE_MONTHS[workStartParts.month - 1] : '';
+              const workStartYearValue = workStartParts.year ? workStartParts.year.toString() : '';
+              const workEndMonthValue = workEndParts.month ? DATE_MONTHS[workEndParts.month - 1] : '';
+              const workEndYearValue = workEndParts.year ? workEndParts.year.toString() : '';
+              const workDateInvalid = invalidWorkDateIds.has(exp.id);
+              const workDateError = workDateInvalid ? 'End date must be the same as or later than start date.' : '';
+              const workEndYearOptions = DATE_YEARS.filter((year) => !workStartParts.year || year >= workStartParts.year);
+              const workEndMonthOptions = DATE_MONTHS.filter((_, idx) => {
+                if (!workStartParts.year || !workEndParts.year || workStartParts.year !== workEndParts.year) return true;
+                return (idx + 1) >= (workStartParts.month ?? 1);
+              });
+
               return (
                 <div key={exp.id} style={{ border: '1px solid #e5e7eb', borderRadius: '0.5rem', padding: '1.5rem', marginBottom: '1rem' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
@@ -2042,15 +2294,7 @@ export function StudentProfilePage() {
                     </label>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
                       <select
-                        value={(() => {
-                          if (!exp.startDate) return '';
-                          const parts = exp.startDate.split(' ');
-                          // If first part is a month name, return it
-                          if (parts.length > 0 && DATE_MONTHS.includes(parts[0])) {
-                            return parts[0];
-                          }
-                          return '';
-                        })()}
+                        value={workStartMonthValue}
                         onChange={(e) => {
                           const month = e.target.value;
                           // Parse existing startDate - could be "Month Year", "Month", "Year", or empty
@@ -2086,19 +2330,7 @@ export function StudentProfilePage() {
                         ))}
                       </select>
                       <select
-                        value={(() => {
-                          if (!exp.startDate) return '';
-                          const parts = exp.startDate.split(' ');
-                          // If it's "Month Year", return year
-                          if (parts.length === 2 && DATE_MONTHS.includes(parts[0])) {
-                            return parts[1];
-                          }
-                          // If it's just a year (numeric), return it
-                          if (parts.length === 1 && /^\d{4}$/.test(parts[0])) {
-                            return parts[0];
-                          }
-                          return '';
-                        })()}
+                        value={workStartYearValue}
                         onChange={(e) => {
                           const year = e.target.value;
                           // Parse existing startDate - could be "Month Year", "Month", "Year", or empty
@@ -2143,15 +2375,7 @@ export function StudentProfilePage() {
                       </label>
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
                         <select
-                          value={(() => {
-                            if (!exp.endDate) return '';
-                            const parts = exp.endDate.split(' ');
-                            // If first part is a month name, return it
-                            if (parts.length > 0 && DATE_MONTHS.includes(parts[0])) {
-                              return parts[0];
-                            }
-                            return '';
-                          })()}
+                          value={workEndMonthValue}
                           onChange={(e) => {
                             const month = e.target.value;
                             // Parse existing endDate - could be "Month Year", "Month", "Year", or empty
@@ -2171,7 +2395,7 @@ export function StudentProfilePage() {
                           style={{
                             width: '100%',
                             padding: '0.5rem 0.75rem',
-                            border: '1px solid #d1d5db',
+                            border: `1px solid ${workDateInvalid ? '#dc2626' : '#d1d5db'}`,
                             borderRadius: '0.5rem',
                             fontSize: '0.875rem',
                             backgroundColor: 'white',
@@ -2180,26 +2404,14 @@ export function StudentProfilePage() {
                           }}
                         >
                           <option value="">Month</option>
-                          {DATE_MONTHS.map((month) => (
+                          {workEndMonthOptions.map((month) => (
                             <option key={month} value={month}>
                               {month}
                             </option>
                           ))}
                         </select>
                         <select
-                          value={(() => {
-                            if (!exp.endDate) return '';
-                            const parts = exp.endDate.split(' ');
-                            // If it's "Month Year", return year
-                            if (parts.length === 2 && DATE_MONTHS.includes(parts[0])) {
-                              return parts[1];
-                            }
-                            // If it's just a year (numeric), return it
-                            if (parts.length === 1 && /^\d{4}$/.test(parts[0])) {
-                              return parts[0];
-                            }
-                            return '';
-                          })()}
+                          value={workEndYearValue}
                           onChange={(e) => {
                             const year = e.target.value;
                             // Parse existing endDate - could be "Month Year", "Month", "Year", or empty
@@ -2219,7 +2431,7 @@ export function StudentProfilePage() {
                           style={{
                             width: '100%',
                             padding: '0.5rem 0.75rem',
-                            border: '1px solid #d1d5db',
+                            border: `1px solid ${workDateInvalid ? '#dc2626' : '#d1d5db'}`,
                             borderRadius: '0.5rem',
                             fontSize: '0.875rem',
                             backgroundColor: 'white',
@@ -2228,13 +2440,18 @@ export function StudentProfilePage() {
                           }}
                         >
                           <option value="">Year</option>
-                          {DATE_YEARS.map((year) => (
+                          {workEndYearOptions.map((year) => (
                             <option key={year} value={year.toString()}>
                               {year}
                             </option>
                           ))}
                         </select>
                       </div>
+                      {workDateError && (
+                        <p style={{ marginTop: '0.25rem', fontSize: '0.75rem', color: '#dc2626' }}>
+                          {workDateError}
+                        </p>
+                      )}
                     </div>
                   )}
                 </div>
@@ -2265,13 +2482,15 @@ export function StudentProfilePage() {
                   <button
                     type="button"
                     onClick={() => handleSaveWorkExperience(exp.id)}
+                    disabled={workDateInvalid}
                     style={{
                       padding: '0.5rem 1.5rem',
-                      backgroundColor: '#C8102E',
+                      backgroundColor: workDateInvalid ? '#9ca3af' : '#C8102E',
                       color: 'white',
                       border: 'none',
                       borderRadius: '0.5rem',
-                      cursor: 'pointer',
+                      cursor: workDateInvalid ? 'not-allowed' : 'pointer',
+                      opacity: workDateInvalid ? 0.9 : 1,
                       fontWeight: 600,
                       fontSize: '0.875rem',
                       display: 'flex',
@@ -2397,6 +2616,20 @@ export function StudentProfilePage() {
               }
 
               // Full form view (editing or newly added)
+              const projectStartParts = parseDateParts(project.startDate);
+              const projectEndParts = parseDateParts(project.endDate);
+              const projectStartMonthValue = projectStartParts.month ? DATE_MONTHS[projectStartParts.month - 1] : '';
+              const projectStartYearValue = projectStartParts.year ? projectStartParts.year.toString() : '';
+              const projectEndMonthValue = projectEndParts.month ? DATE_MONTHS[projectEndParts.month - 1] : '';
+              const projectEndYearValue = projectEndParts.year ? projectEndParts.year.toString() : '';
+              const projectDateInvalid = invalidProjectDateIds.has(project.id);
+              const projectDateError = projectDateInvalid ? 'End date must be the same as or later than start date.' : '';
+              const projectEndYearOptions = DATE_YEARS.filter((year) => !projectStartParts.year || year >= projectStartParts.year);
+              const projectEndMonthOptions = DATE_MONTHS.filter((_, idx) => {
+                if (!projectStartParts.year || !projectEndParts.year || projectStartParts.year !== projectEndParts.year) return true;
+                return (idx + 1) >= (projectStartParts.month ?? 1);
+              });
+
               return (
                 <div key={project.id} style={{ border: '1px solid #e5e7eb', borderRadius: '0.5rem', padding: '1.5rem', marginBottom: '1rem' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
@@ -2529,15 +2762,7 @@ export function StudentProfilePage() {
                     </label>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
                       <select
-                        value={(() => {
-                          if (!project.startDate) return '';
-                          const parts = project.startDate.split(' ');
-                          // If first part is a month name, return it
-                          if (parts.length > 0 && DATE_MONTHS.includes(parts[0])) {
-                            return parts[0];
-                          }
-                          return '';
-                        })()}
+                        value={projectStartMonthValue}
                         onChange={(e) => {
                           const month = e.target.value;
                           // Parse existing startDate - could be "Month Year", "Month", "Year", or empty
@@ -2573,19 +2798,7 @@ export function StudentProfilePage() {
                         ))}
                       </select>
                       <select
-                        value={(() => {
-                          if (!project.startDate) return '';
-                          const parts = project.startDate.split(' ');
-                          // If it's "Month Year", return year
-                          if (parts.length === 2 && DATE_MONTHS.includes(parts[0])) {
-                            return parts[1];
-                          }
-                          // If it's just a year (numeric), return it
-                          if (parts.length === 1 && /^\d{4}$/.test(parts[0])) {
-                            return parts[0];
-                          }
-                          return '';
-                        })()}
+                        value={projectStartYearValue}
                         onChange={(e) => {
                           const year = e.target.value;
                           // Parse existing startDate - could be "Month Year", "Month", "Year", or empty
@@ -2629,15 +2842,7 @@ export function StudentProfilePage() {
                     </label>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
                       <select
-                        value={(() => {
-                          if (!project.endDate) return '';
-                          const parts = project.endDate.split(' ');
-                          // If first part is a month name, return it
-                          if (parts.length > 0 && DATE_MONTHS.includes(parts[0])) {
-                            return parts[0];
-                          }
-                          return '';
-                        })()}
+                        value={projectEndMonthValue}
                         onChange={(e) => {
                           const month = e.target.value;
                           // Parse existing endDate - could be "Month Year", "Month", "Year", or empty
@@ -2657,7 +2862,7 @@ export function StudentProfilePage() {
                         style={{
                           width: '100%',
                           padding: '0.5rem 0.75rem',
-                          border: '1px solid #d1d5db',
+                          border: `1px solid ${projectDateInvalid ? '#dc2626' : '#d1d5db'}`,
                           borderRadius: '0.5rem',
                           fontSize: '0.875rem',
                           backgroundColor: 'white',
@@ -2666,26 +2871,14 @@ export function StudentProfilePage() {
                         }}
                       >
                         <option value="">Month</option>
-                        {DATE_MONTHS.map((month) => (
+                        {projectEndMonthOptions.map((month) => (
                           <option key={month} value={month}>
                             {month}
                           </option>
                         ))}
                       </select>
                       <select
-                        value={(() => {
-                          if (!project.endDate) return '';
-                          const parts = project.endDate.split(' ');
-                          // If it's "Month Year", return year
-                          if (parts.length === 2 && DATE_MONTHS.includes(parts[0])) {
-                            return parts[1];
-                          }
-                          // If it's just a year (numeric), return it
-                          if (parts.length === 1 && /^\d{4}$/.test(parts[0])) {
-                            return parts[0];
-                          }
-                          return '';
-                        })()}
+                        value={projectEndYearValue}
                         onChange={(e) => {
                           const year = e.target.value;
                           // Parse existing endDate - could be "Month Year", "Month", "Year", or empty
@@ -2705,7 +2898,7 @@ export function StudentProfilePage() {
                         style={{
                           width: '100%',
                           padding: '0.5rem 0.75rem',
-                          border: '1px solid #d1d5db',
+                          border: `1px solid ${projectDateInvalid ? '#dc2626' : '#d1d5db'}`,
                           borderRadius: '0.5rem',
                           fontSize: '0.875rem',
                           backgroundColor: 'white',
@@ -2714,13 +2907,18 @@ export function StudentProfilePage() {
                         }}
                       >
                         <option value="">Year</option>
-                        {DATE_YEARS.map((year) => (
+                        {projectEndYearOptions.map((year) => (
                           <option key={year} value={year.toString()}>
                             {year}
                           </option>
                         ))}
                       </select>
                     </div>
+                    {projectDateError && (
+                      <p style={{ marginTop: '0.25rem', fontSize: '0.75rem', color: '#dc2626' }}>
+                        {projectDateError}
+                      </p>
+                    )}
                   </div>
                 </div>
 
@@ -2729,13 +2927,15 @@ export function StudentProfilePage() {
                   <button
                     type="button"
                     onClick={() => handleSaveProject(project.id)}
+                    disabled={projectDateInvalid}
                     style={{
                       padding: '0.5rem 1.5rem',
-                      backgroundColor: '#C8102E',
+                      backgroundColor: projectDateInvalid ? '#9ca3af' : '#C8102E',
                       color: 'white',
                       border: 'none',
                       borderRadius: '0.5rem',
-                      cursor: 'pointer',
+                      cursor: projectDateInvalid ? 'not-allowed' : 'pointer',
+                      opacity: projectDateInvalid ? 0.9 : 1,
                       fontWeight: 600,
                       fontSize: '0.875rem',
                       display: 'flex',
@@ -2854,6 +3054,20 @@ export function StudentProfilePage() {
               }
 
               // Full form view (editing or newly added)
+              const certIssueParts = parseDateParts(cert.issueDate);
+              const certExpiryParts = parseDateParts(cert.expiryDate);
+              const certIssueMonthValue = certIssueParts.month ? DATE_MONTHS[certIssueParts.month - 1] : '';
+              const certIssueYearValue = certIssueParts.year ? certIssueParts.year.toString() : '';
+              const certExpiryMonthValue = certExpiryParts.month ? DATE_MONTHS[certExpiryParts.month - 1] : '';
+              const certExpiryYearValue = certExpiryParts.year ? certExpiryParts.year.toString() : '';
+              const certDateInvalid = invalidCertificationDateIds.has(cert.id);
+              const certDateError = certDateInvalid ? 'End date must be the same as or later than start date.' : '';
+              const certEndYearOptions = DATE_YEARS.filter((year) => !certIssueParts.year || year >= certIssueParts.year);
+              const certEndMonthOptions = DATE_MONTHS.filter((_, idx) => {
+                if (!certIssueParts.year || !certExpiryParts.year || certIssueParts.year !== certExpiryParts.year) return true;
+                return (idx + 1) >= (certIssueParts.month ?? 1);
+              });
+
               return (
                 <div key={cert.id} style={{ border: '1px solid #e5e7eb', borderRadius: '0.5rem', padding: '1.5rem', marginBottom: '1rem' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
@@ -2942,15 +3156,7 @@ export function StudentProfilePage() {
                     </label>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
                       <select
-                        value={(() => {
-                          if (!cert.issueDate) return '';
-                          const parts = cert.issueDate.split(' ');
-                          // If first part is a month name, return it
-                          if (parts.length > 0 && DATE_MONTHS.includes(parts[0])) {
-                            return parts[0];
-                          }
-                          return '';
-                        })()}
+                        value={certIssueMonthValue}
                         onChange={(e) => {
                           const month = e.target.value;
                           // Parse existing issueDate - could be "Month Year", "Month", "Year", or empty
@@ -2986,19 +3192,7 @@ export function StudentProfilePage() {
                         ))}
                       </select>
                       <select
-                        value={(() => {
-                          if (!cert.issueDate) return '';
-                          const parts = cert.issueDate.split(' ');
-                          // If it's "Month Year", return year
-                          if (parts.length === 2 && DATE_MONTHS.includes(parts[0])) {
-                            return parts[1];
-                          }
-                          // If it's just a year (numeric), return it
-                          if (parts.length === 1 && /^\d{4}$/.test(parts[0])) {
-                            return parts[0];
-                          }
-                          return '';
-                        })()}
+                        value={certIssueYearValue}
                         onChange={(e) => {
                           const year = e.target.value;
                           // Parse existing issueDate - could be "Month Year", "Month", "Year", or empty
@@ -3042,15 +3236,7 @@ export function StudentProfilePage() {
                     </label>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
                       <select
-                        value={(() => {
-                          if (!cert.expiryDate) return '';
-                          const parts = cert.expiryDate.split(' ');
-                          // If first part is a month name, return it
-                          if (parts.length > 0 && DATE_MONTHS.includes(parts[0])) {
-                            return parts[0];
-                          }
-                          return '';
-                        })()}
+                        value={certExpiryMonthValue}
                         onChange={(e) => {
                           const month = e.target.value;
                           // Parse existing expiryDate - could be "Month Year", "Month", "Year", or empty
@@ -3070,7 +3256,7 @@ export function StudentProfilePage() {
                         style={{
                           width: '100%',
                           padding: '0.5rem 0.75rem',
-                          border: '1px solid #d1d5db',
+                          border: `1px solid ${certDateInvalid ? '#dc2626' : '#d1d5db'}`,
                           borderRadius: '0.5rem',
                           fontSize: '0.875rem',
                           backgroundColor: 'white',
@@ -3079,26 +3265,14 @@ export function StudentProfilePage() {
                         }}
                       >
                         <option value="">Month</option>
-                        {DATE_MONTHS.map((month) => (
+                        {certEndMonthOptions.map((month) => (
                           <option key={month} value={month}>
                             {month}
                           </option>
                         ))}
                       </select>
                       <select
-                        value={(() => {
-                          if (!cert.expiryDate) return '';
-                          const parts = cert.expiryDate.split(' ');
-                          // If it's "Month Year", return year
-                          if (parts.length === 2 && DATE_MONTHS.includes(parts[0])) {
-                            return parts[1];
-                          }
-                          // If it's just a year (numeric), return it
-                          if (parts.length === 1 && /^\d{4}$/.test(parts[0])) {
-                            return parts[0];
-                          }
-                          return '';
-                        })()}
+                        value={certExpiryYearValue}
                         onChange={(e) => {
                           const year = e.target.value;
                           // Parse existing expiryDate - could be "Month Year", "Month", "Year", or empty
@@ -3118,7 +3292,7 @@ export function StudentProfilePage() {
                         style={{
                           width: '100%',
                           padding: '0.5rem 0.75rem',
-                          border: '1px solid #d1d5db',
+                          border: `1px solid ${certDateInvalid ? '#dc2626' : '#d1d5db'}`,
                           borderRadius: '0.5rem',
                           fontSize: '0.875rem',
                           backgroundColor: 'white',
@@ -3127,13 +3301,18 @@ export function StudentProfilePage() {
                         }}
                       >
                         <option value="">Year</option>
-                        {DATE_YEARS.map((year) => (
+                        {certEndYearOptions.map((year) => (
                           <option key={year} value={year.toString()}>
                             {year}
                           </option>
                         ))}
                       </select>
                     </div>
+                    {certDateError && (
+                      <p style={{ marginTop: '0.25rem', fontSize: '0.75rem', color: '#dc2626' }}>
+                        {certDateError}
+                      </p>
+                    )}
                   </div>
                 </div>
 
@@ -3182,13 +3361,15 @@ export function StudentProfilePage() {
                   <button
                     type="button"
                     onClick={() => handleSaveCertification(cert.id)}
+                    disabled={certDateInvalid}
                     style={{
                       padding: '0.5rem 1.5rem',
-                      backgroundColor: '#C8102E',
+                      backgroundColor: certDateInvalid ? '#9ca3af' : '#C8102E',
                       color: 'white',
                       border: 'none',
                       borderRadius: '0.5rem',
-                      cursor: 'pointer',
+                      cursor: certDateInvalid ? 'not-allowed' : 'pointer',
+                      opacity: certDateInvalid ? 0.9 : 1,
                       fontWeight: 600,
                       fontSize: '0.875rem',
                       display: 'flex',
@@ -3225,14 +3406,14 @@ export function StudentProfilePage() {
             </button>
             <button
               type="submit"
-              disabled={saving}
+              disabled={saving || invalidWorkDateIds.size > 0 || invalidProjectDateIds.size > 0 || invalidCertificationDateIds.size > 0}
               style={{
                 padding: '0.5rem 1.5rem',
-                backgroundColor: saving ? '#9ca3af' : '#C8102E',
+                backgroundColor: (saving || invalidWorkDateIds.size > 0 || invalidProjectDateIds.size > 0 || invalidCertificationDateIds.size > 0) ? '#9ca3af' : '#C8102E',
                 color: 'white',
                 border: 'none',
                 borderRadius: '0.5rem',
-                cursor: saving ? 'not-allowed' : 'pointer',
+                cursor: (saving || invalidWorkDateIds.size > 0 || invalidProjectDateIds.size > 0 || invalidCertificationDateIds.size > 0) ? 'not-allowed' : 'pointer',
                 fontWeight: 600,
                 fontSize: '0.875rem',
                 display: 'flex',

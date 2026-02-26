@@ -51,6 +51,7 @@ export interface ProfileResponse {
     approvalStatus: ApprovalStatus;
     createdAt: string;
     passwordUpdatedAt?: string | null;
+    profilePhotoFilePath?: string | null;
     studentId?: string;
     degree?: string;
     yearOfStudy?: number;

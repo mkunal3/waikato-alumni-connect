@@ -28,6 +28,7 @@ export function MentorDashboard() {
   const [expandedCertification, setExpandedCertification] = useState<number | null>(null);
   const [coverLetterExpanded, setCoverLetterExpanded] = useState<boolean>(false);
   const [profileExpanded, setProfileExpanded] = useState<boolean>(false);
+  const normalizedApiBaseUrl = API_BASE_URL.replace(/\/$/, '');
 
   useEffect(() => {
     const fetchData = async () => {
@@ -191,6 +192,9 @@ export function MentorDashboard() {
     currentPosition: profileData?.currentPosition || '',
     totalSessions: 0,
   };
+
+  const profilePhotoPath = profileData?.profilePhotoFilePath || user?.profilePhotoFilePath || null;
+  const profilePhotoUrl = profilePhotoPath ? `${normalizedApiBaseUrl}${profilePhotoPath}` : null;
 
   const stats = {
     activeMentees: currentMentees.length,
@@ -1681,8 +1685,27 @@ export function MentorDashboard() {
                 {/* Profile Card */}
                 <div style={{ backgroundColor: 'white', borderRadius: '0.75rem', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', border: '1px solid #e5e7eb', padding: '1.25rem' }}>
                   <div style={{ textAlign: 'center', marginBottom: '1rem' }}>
-                    <div style={{ width: '72px', height: '72px', borderRadius: '9999px', backgroundColor: '#e5e7eb', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6b7280', fontWeight: 600, fontSize: '1.25rem', margin: '0 auto 0.75rem' }}>
-                      {mentorProfile.name.split(' ').map(n => n[0]).join('')}
+                    <div
+                      style={{
+                        width: '72px',
+                        height: '72px',
+                        borderRadius: '9999px',
+                        backgroundColor: profilePhotoUrl ? 'transparent' : '#e5e7eb',
+                        backgroundImage: profilePhotoUrl ? `url(${profilePhotoUrl})` : undefined,
+                        backgroundSize: 'cover',
+                        backgroundPosition: 'center',
+                        border: '1px solid #e5e7eb',
+                        overflow: 'hidden',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: '#6b7280',
+                        fontWeight: 600,
+                        fontSize: '1.25rem',
+                        margin: '0 auto 0.75rem'
+                      }}
+                    >
+                      {!profilePhotoUrl && mentorProfile.name.split(' ').map(n => n[0]).join('')}
                     </div>
                     <h3 style={{ fontWeight: 600, marginBottom: '0.25rem', fontSize: '1rem' }}>{mentorProfile.name}</h3>
                     <p style={{ fontSize: '0.8rem', color: '#6b7280', marginBottom: '0.5rem' }}>{mentorProfile.email}</p>

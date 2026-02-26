@@ -66,6 +66,10 @@ export const API_ENDPOINTS = {
   adminReactivateAdmin: (adminId: number) => `/admin/admins/${adminId}/reactivate`,
   adminDeactivateUser: (userId: number) => `/admin/users/${userId}/deactivate`,
   adminReactivateUser: (userId: number) => `/admin/users/${userId}/reactivate`,
+  adminVerificationCodes: '/admin/verification-codes',
+  adminDeleteVerificationCode: (id: number) => `/admin/verification-codes/${id}`,
+  adminPasswordResetRequests: '/admin/password-reset-requests',
+  adminDevPasswordResetCode: (email: string) => `/admin/dev/password-reset-code?email=${encodeURIComponent(email)}`,
   
   // Utility
   health: '/',

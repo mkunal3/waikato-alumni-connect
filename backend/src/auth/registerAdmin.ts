@@ -11,6 +11,17 @@ function isWaikatoStaffEmail(email: string): boolean {
   return email.toLowerCase().endsWith("@waikato.ac.nz");
 }
 
+function formatNameFromEmail(email: string): string {
+  const localPart = email.split("@")[0] || "";
+  const words = localPart
+    .replace(/[._-]+/g, " ")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1));
+  return words.join(" ") || "Admin";
+}
+
 /**
  * POST /auth/register-admin
  * 
@@ -27,18 +38,23 @@ router.post(
   "/register-admin",
   async (req: Request, res: Response): Promise<Response | void> => {
     try {
-      const { name, email, password, inviteCode } = req.body as {
-        name?: string;
+      const { fullName, email, password, inviteCode } = req.body as {
+        fullName?: string;
         email?: string;
         password?: string;
         inviteCode?: string;
       };
 
       // 1. Validate required fields
-      if (!name || !email || !password || !inviteCode) {
+      if (!email || !password || !inviteCode) {
         return res.status(400).json({
-          error: "Name, email, password, and inviteCode are required",
+          error: "Email, password, and inviteCode are required",
         });
+      }
+
+      const trimmedFullName = (typeof fullName === "string" ? fullName : "").trim();
+      if (!trimmedFullName) {
+        return res.status(400).json({ error: "Full name is required." });
       }
 
       // 2. Normalize and validate email
@@ -134,7 +150,7 @@ router.post(
         // Create user
         const user = await tx.user.create({
           data: {
-            name,
+            name: trimmedFullName || formatNameFromEmail(normalisedEmail),
             email: normalisedEmail,
             passwordHash,
             passwordUpdatedAt: new Date(),

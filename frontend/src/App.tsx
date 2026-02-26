@@ -19,7 +19,7 @@ import { StudentProfilePage } from './pages/StudentProfilePage';
 import { BrowseMentorsPage } from './pages/BrowseMentorsPage';
 import { MentorDashboard } from './pages/MentorDashboard';
 import { MentorProfilePage } from './pages/MentorProfilePage';
-import { AdminDashboard } from './pages/AdminDashboard';
+import AdminDashboard from './pages/AdminDashboard';
 import { ChatPage } from './pages/ChatPage';
 
 export default function App() {

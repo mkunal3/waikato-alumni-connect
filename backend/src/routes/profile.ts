@@ -30,6 +30,7 @@ const profileSelect = {
   linkedInUrl: true,
   githubUrl: true,
   portfolioUrl: true,
+  profilePhotoFilePath: true,
   gpa: true,
   languages: true,
   interests: true,

@@ -5,73 +5,81 @@ import { apiRequest, API_BASE_URL } from '../config/api';
 import { API_ENDPOINTS } from '../config/api';
 import { 
   GraduationCap, Award, CheckCircle, XCircle, LogOut,
-  Target, FileText, ArrowLeft, Key, Copy, Plus, ChevronDown, AlertCircle, UserCircle
+  Target, FileText, ArrowLeft, Key, Copy, Plus, ChevronDown, AlertCircle, UserCircle,
+  Eye, EyeOff
 } from 'lucide-react';
+import ProfilePhotoUploader from '../components/ProfilePhotoUploader';
 
 const waikatoLogo = '/waikato-logo.png';
-
-interface PendingUser {
-  id: number;
-  name: string;
-  email: string;
-  role: string;
-  approvalStatus: string;
-  createdAt: string;
-}
 
 interface Student {
   id: number;
   name: string;
   email: string;
-  role: string;
+  role?: string;
   approvalStatus: string;
   createdAt: string;
+  isActive?: boolean;
+  about?: string | null;
   studentId?: string;
-  contactEmail?: string;
   degree?: string;
   yearOfStudy?: number;
   expectedGraduation?: string;
   academicFocus?: string;
-  mentoringGoals?: string[];
-  skillsWanted?: string[];
-  cvFileName?: string;
-  cvUploadedAt?: string;
-  about?: string;
+  gpa?: number | string;
+  contactEmail?: string;
   location?: string;
   linkedInUrl?: string;
   githubUrl?: string;
   portfolioUrl?: string;
-  gpa?: string;
+   mentoringGoals?: string[];
+  skillsWanted?: string[];
+  skillsOffered?: string[];
   languages?: string[];
   interests?: string[];
   workExperience?: any;
   projects?: any;
   certifications?: any;
+  profilePhotoFilePath?: string | null;
+  resumeFilePath?: string | null;
+  coverLetterFilePath?: string | null;
+  cvFileName?: string | null;
+  cvUploadedAt?: string | Date | null;
+  phoneNumber?: string;
+  tags?: string[];
 }
 
 interface Alumni {
   id: number;
   name: string;
   email: string;
-  role: string;
+  role?: string;
   approvalStatus: string;
   createdAt: string;
+  isActive?: boolean;
+  about?: string | null;
   graduationYear?: number;
   currentCompany?: string;
   currentPosition?: string;
-  mentoringGoals?: string[];
-  skillsOffered?: string[];
-  about?: string;
-  location?: string;
   linkedInUrl?: string;
   githubUrl?: string;
   portfolioUrl?: string;
+  mentoringGoals?: string[];
+  skillsWanted?: string[];
+  skillsOffered?: string[];
+  expertiseAreas?: string[];
   languages?: string[];
   interests?: string[];
+  location?: string;
+  profilePhotoFilePath?: string | null;
   workExperience?: any;
   projects?: any;
   certifications?: any;
+  cvFileName?: string | null;
+  cvUploadedAt?: string | Date | null;
 }
+
+type PendingUser = Student & Partial<Alumni>;
 
 interface Match {
   id: number;
@@ -90,6 +98,7 @@ interface Match {
     yearOfStudy?: number;
     expectedGraduation?: string;
     academicFocus?: string;
+    profilePhotoFilePath?: string | null;
   };
   alumni: {
     id: number;
@@ -98,6 +107,7 @@ interface Match {
     graduationYear?: number;
     currentCompany?: string;
     currentPosition?: string;
+    profilePhotoFilePath?: string | null;
   };
   confirmedBy?: {
     id: number;
@@ -119,20 +129,80 @@ interface AdminInviteSummary {
   createdAt: string;
 }
 
-export function AdminDashboard() {
-  const { user, logout } = useAuth();
-  const currentUserId = user?.id ?? null;
+/**
+ * Reusable Avatar Component - displays 24-32px circular avatar with image or initials
+ */
+interface AvatarProps {
+  name: string;
+  photoPath?: string | null;
+  size?: number; // in pixels, default 28
+}
+
+function Avatar({ name, photoPath, size = 28 }: AvatarProps) {
+  const getInitials = (fullName: string): string => {
+    return fullName
+      .split(' ')
+      .map(part => part.charAt(0))
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
+  };
+
+  const getInitialBgColor = (fullName: string): string => {
+    // Deterministic color based on name hash
+    const hash = fullName.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    const colors = ['bg-blue-400', 'bg-purple-400', 'bg-pink-400', 'bg-green-400', 'bg-indigo-400', 'bg-teal-400'];
+    return colors[hash % colors.length];
+  };
+
+  const initials = getInitials(name);
+  const bgColor = getInitialBgColor(name);
+
+  return (
+    <div
+      className={`flex-shrink-0 rounded-full border border-gray-300 overflow-hidden flex items-center justify-center`}
+      style={{
+        width: size,
+        height: size,
+        minWidth: size,
+        minHeight: size,
+      }}
+    >
+      {photoPath ? (
+        <img
+          src={API_BASE_URL + photoPath}
+          alt={name}
+          className="w-full h-full object-cover"
+          onError={(e) => {
+            // If image fails to load, show initials instead
+            const container = e.currentTarget.parentElement;
+            if (container) {
+              container.innerHTML = `<div class="${bgColor} w-full h-full flex items-center justify-center"><span class="text-white font-semibold text-xs" style="font-size: ${Math.max(size / 2.5, 8)}px">${initials}</span></div>`;
+            }
+          }}
+        />
+      ) : (
+        <div className={`${bgColor} w-full h-full flex items-center justify-center`}>
+          <span className="text-white font-semibold" style={{ fontSize: Math.max(size / 2.5, 8) }}>
+            {initials}
+          </span>
+        </div>
+      )}
+    </div>
+  );
+}
+function AdminDashboard() {
   const navigate = useNavigate();
+  const { user, logout } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
-  
-  // Initialize viewMode from URL params or default to 'overview'
-  const initialViewMode = (() => {
-    const view = searchParams.get('view') as 'overview' | 'students' | 'studentDetail' | 'alumni' | 'alumniDetail' | 'matches' | 'matchDetail' | 'pending' | 'pendingDetail' | 'admins' | 'stats' | null;
-    // Map 'stats' to 'overview' for backward compatibility
-    if (view === 'stats') return 'overview';
-    return view || 'overview';
-  })();
-  
+  const [userState, setUserState] = useState(user);
+  const effectiveUser = userState || user;
+  const normalizedApiBaseUrl = API_BASE_URL.replace(/\/$/, "");
+  const currentUserId = effectiveUser?.id ?? null;
+
+  const initialViewMode: 'overview' | 'students' | 'studentDetail' | 'alumni' | 'alumniDetail' | 'matches' | 'matchDetail' | 'pending' | 'pendingDetail' | 'admins' =
+    (searchParams.get('view') as 'overview' | 'students' | 'studentDetail' | 'alumni' | 'alumniDetail' | 'matches' | 'matchDetail' | 'pending' | 'pendingDetail' | 'admins') || 'overview';
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -173,8 +243,16 @@ export function AdminDashboard() {
   const [newAdminInvitationCode, setNewAdminInvitationCode] = useState('');
   const [showAdminInvitationModal, setShowAdminInvitationModal] = useState(false);
   const [creatingAdminInvitationCode, setCreatingAdminInvitationCode] = useState(false);
-  const [adminInvites, setAdminInvites] = useState<AdminInviteSummary[]>([]);
+  const [alumniInviteExpanded, setAlumniInviteExpanded] = useState(false);
+  const [adminInvitesExpanded, setAdminInvitesExpanded] = useState(false);
   const [newAdminInviteEmail, setNewAdminInviteEmail] = useState('');
+  const [verificationCodes, setVerificationCodes] = useState<Array<{ id: number; email: string; code: string; purpose: string; expiresAt: string; usedAt: string | null; createdAt: string; status: 'active' | 'expired' | 'used' }>>([]);
+  const [verificationCodesExpanded, setVerificationCodesExpanded] = useState(false);
+  const [showVerificationCodes, setShowVerificationCodes] = useState(false);
+  const [passwordResetRequests, setPasswordResetRequests] = useState<Array<{ id: number; email: string; code: string; createdAt: string; expiresAt: string }>>([]);
+  const [passwordResetLoading, setPasswordResetLoading] = useState(false);
+  const [passwordResetError, setPasswordResetError] = useState<string | null>(null);
+  const [passwordResetExpanded, setPasswordResetExpanded] = useState(false);
   const [creatingAdminInvite, setCreatingAdminInvite] = useState(false);
   const [lastAdminInviteCode, setLastAdminInviteCode] = useState<string | null>(null);
   const [lastAdminInviteExpiresAt, setLastAdminInviteExpiresAt] = useState<string | null>(null);
@@ -184,6 +262,10 @@ export function AdminDashboard() {
   const [selectedAlumniForMatch, setSelectedAlumniForMatch] = useState<Alumni | null>(null);
   const [matchCoverLetter, setMatchCoverLetter] = useState('');
   const [creatingMatch, setCreatingMatch] = useState(false);
+  const [matchStudents, setMatchStudents] = useState<Array<{ id: number; name: string; email: string; studentId?: string }>>([]);
+  const [matchAlumni, setMatchAlumni] = useState<Array<{ id: number; name: string; email: string; degree?: string }>>([]);
+  const [isLoadingMatchOptions, setIsLoadingMatchOptions] = useState(false);
+  const [matchOptionsError, setMatchOptionsError] = useState<string | null>(null);
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -198,9 +280,10 @@ export function AdminDashboard() {
   // Profile photo upload state
   const [uploadingProfilePhoto, setUploadingProfilePhoto] = useState(false);
   const [profilePhotoError, setProfilePhotoError] = useState<string | null>(null);
+  const [profilePhotoVersion, setProfilePhotoVersion] = useState(0);
 
   // Admin management state
-  const [admins, setAdmins] = useState<Array<{ id: number; name: string; email: string; isActive: boolean; passwordUpdatedAt: string | null; createdAt: string }>>([]);
+  const [admins, setAdmins] = useState<Array<{ id: number; name: string; email: string; isActive: boolean; passwordUpdatedAt: string | null; createdAt: string; profilePhotoFilePath?: string | null }>>([]);
   const [processingAdminId, setProcessingAdminId] = useState<number | null>(null);
 
   // Update URL when viewMode changes
@@ -218,6 +301,15 @@ export function AdminDashboard() {
     }
   }, [viewMode, searchParams, setSearchParams]);
 
+  // Collapse all sections when returning to overview
+  useEffect(() => {
+    if (viewMode === 'overview') {
+      setAlumniInviteExpanded(false);
+      setAdminInvitesExpanded(false);
+      setVerificationCodesExpanded(false);
+    }
+  }, [viewMode]);
+
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -231,7 +323,7 @@ export function AdminDashboard() {
         // Load matches for students/alumni views too, as we need match status for displaying student/alumni status
         const shouldLoadMatches = viewMode === 'matches' || viewMode === 'matchDetail' || viewMode === 'overview' || viewMode === 'students' || viewMode === 'studentDetail' || viewMode === 'alumni' || viewMode === 'alumniDetail';
 
-        const [statsResponse, studentsResponse, alumniResponse, matchesResponse, invitationCodeResponse, _adminInvitationCodeResponse, adminInvitesResponse, adminsResponse] = await Promise.allSettled([
+        const [statsResponse, studentsResponse, alumniResponse, matchesResponse, invitationCodeResponse, _adminInvitationCodeResponse, verificationCodesResponse, adminsResponse] = await Promise.allSettled([
           apiRequest<AdminStats>(API_ENDPOINTS.adminStatistics),
           shouldLoadStudents 
             ? apiRequest<{ students: Student[] }>(API_ENDPOINTS.adminAllStudents).catch(() => ({ students: [] }))
@@ -244,9 +336,10 @@ export function AdminDashboard() {
             : Promise.resolve({ matches: [] }),
           apiRequest<{ code: string | null }>(API_ENDPOINTS.adminGetInvitationCode).catch(() => ({ code: null })),
           apiRequest<{ code: string | null }>(API_ENDPOINTS.adminGetAdminInvitationCode).catch(() => ({ code: null })),
-          apiRequest<{ invites: AdminInviteSummary[] }>(API_ENDPOINTS.adminListPendingAdminInvites).catch(() => ({ invites: [] })),
+          apiRequest<{ codes: Array<{ id: number; email: string; code: string; purpose: string; expiresAt: string; usedAt: string | null; createdAt: string; status: 'active' | 'expired' | 'used' }> }>(API_ENDPOINTS.adminVerificationCodes).catch(() => ({ codes: [] })),
+          
           shouldLoadAdmins
-            ? apiRequest<{ admins: Array<{ id: number; name: string; email: string; isActive: boolean; passwordUpdatedAt: string | null; createdAt: string }> }>(API_ENDPOINTS.adminListAdmins).catch(() => ({ admins: [] }))
+            ? apiRequest<{ admins: Array<{ id: number; name: string; email: string; isActive: boolean; passwordUpdatedAt: string | null; createdAt: string; profilePhotoFilePath?: string | null }> }>(API_ENDPOINTS.adminListAdmins).catch(() => ({ admins: [] }))
             : Promise.resolve({ admins: [] })
         ]);
 
@@ -325,10 +418,13 @@ export function AdminDashboard() {
 
 
 
-        if (adminInvitesResponse.status === 'fulfilled') {
-          setAdminInvites(adminInvitesResponse.value.invites || []);
+        // Admin invites are not displayed in this view; ignore response
+
+        if (verificationCodesResponse.status === 'fulfilled') {
+          const codesPayload = verificationCodesResponse.value.codes || [];
+          setVerificationCodes(codesPayload);
         } else {
-          setAdminInvites([]);
+          setVerificationCodes([]);
         }
 
         if (adminsResponse.status === 'fulfilled') {
@@ -346,6 +442,15 @@ export function AdminDashboard() {
 
     fetchData();
   }, [viewMode]);
+
+  useEffect(() => {
+    fetchPasswordResetRequests();
+    const interval = setInterval(() => {
+      fetchPasswordResetRequests();
+    }, 15000);
+
+    return () => clearInterval(interval);
+  }, []);
 
   const handleLogout = () => {
     navigate('/');
@@ -897,8 +1002,7 @@ export function AdminDashboard() {
       setNewAdminInviteEmail('');
 
       // refresh pending invites list
-      const invitesResp = await apiRequest<{ invites: AdminInviteSummary[] }>(API_ENDPOINTS.adminListPendingAdminInvites);
-      setAdminInvites(invitesResp.invites || []);
+      await apiRequest<{ invites: AdminInviteSummary[] }>(API_ENDPOINTS.adminListPendingAdminInvites);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create admin invite');
     } finally {
@@ -906,66 +1010,55 @@ export function AdminDashboard() {
     }
   };
 
-  const handleReject = async (userId: number, role: string) => {
+  const fetchPasswordResetRequests = async () => {
+    try {
+      setPasswordResetLoading(true);
+      setPasswordResetError(null);
+
+      const response = await apiRequest<{ count: number; requests: Array<{ id: number; email: string; code: string; createdAt: string; expiresAt: string }> }>(API_ENDPOINTS.adminPasswordResetRequests);
+      setPasswordResetRequests(response.requests || []);
+    } catch (err) {
+      setPasswordResetError(err instanceof Error ? err.message : 'Failed to load password reset requests');
+      setPasswordResetRequests([]);
+    } finally {
+      setPasswordResetLoading(false);
+    }
+  };
+
+
+  const handleReject = async (userId: number, role: 'student' | 'alumni') => {
     if (!window.confirm(`Are you sure you want to reject this ${role}?`)) {
       return;
     }
 
     try {
       setError(null);
-      const endpoint = role === 'student' 
+      const endpoint = role === 'student'
         ? API_ENDPOINTS.adminRejectStudent(userId)
         : API_ENDPOINTS.adminRejectAlumni(userId);
-      
+
       await apiRequest(endpoint, { method: 'POST' });
-      
-      // Refresh data
-      const [studentsResponse, _alumniResponse, statsResponse, allStudentsResponse, allAlumniResponse] = await Promise.allSettled([
-        apiRequest<{ students: PendingUser[] }>(API_ENDPOINTS.adminPendingStudents).catch(() => ({ students: [] })),
-        apiRequest<{ mentors: PendingUser[] }>(API_ENDPOINTS.adminPendingAlumni).catch(() => ({ mentors: [] })),
-        apiRequest<AdminStats>(API_ENDPOINTS.adminStatistics),
-        viewMode === 'students' || viewMode === 'studentDetail' || viewMode === 'pendingDetail'
-          ? apiRequest<{ students: Student[] }>(API_ENDPOINTS.adminAllStudents).catch(() => ({ students: [] }))
-          : Promise.resolve({ students: [] }),
-        viewMode === 'alumni' || viewMode === 'alumniDetail' 
-          ? apiRequest<{ mentors: Alumni[] }>(API_ENDPOINTS.adminAllAlumni).catch(() => ({ mentors: [] }))
-          : Promise.resolve({ mentors: [] })
+      setSuccessMessage(`${role === 'student' ? 'Student' : 'Alumni'} rejected successfully.`);
+
+      const [studentsResponse, alumniResponse] = await Promise.allSettled([
+        apiRequest<{ students: Student[] }>(API_ENDPOINTS.adminAllStudents).catch(() => ({ students: [] })),
+        apiRequest<{ mentors: Alumni[] }>(API_ENDPOINTS.adminAllAlumni).catch(() => ({ mentors: [] })),
       ]);
 
       if (studentsResponse.status === 'fulfilled') {
-        setPendingStudents(studentsResponse.value.students || []);
-        
-        // If in pendingDetail view and student is rejected, go back to pending list
-        if (viewMode === 'pendingDetail' && role === 'student') {
-          // If no more pending students, go back to overview
-          if (!studentsResponse.value.students || studentsResponse.value.students.length === 0) {
-            setViewMode('overview');
-            setSelectedStudent(null);
-          } else {
-            // Go back to pending list
-            setViewMode('pending');
-            setSelectedStudent(null);
-          }
-        }
-      }
-      if (statsResponse.status === 'fulfilled') {
-        setStats(statsResponse.value);
-      }
-      if (allStudentsResponse.status === 'fulfilled' && allStudentsResponse.value.students) {
-        setAllStudents(allStudentsResponse.value.students);
-        // Update selected student if viewing detail
+        setAllStudents(studentsResponse.value.students || []);
         if (viewMode === 'studentDetail' && selectedStudent) {
-          const updated = allStudentsResponse.value.students.find(s => s.id === selectedStudent.id);
+          const updated = studentsResponse.value.students.find((s) => s.id === selectedStudent.id);
           if (updated) {
             setSelectedStudent(updated);
           }
         }
       }
-      if (allAlumniResponse.status === 'fulfilled' && allAlumniResponse.value.mentors) {
-        setAllAlumni(allAlumniResponse.value.mentors);
-        // Update selected alumni if viewing detail
+
+      if (alumniResponse.status === 'fulfilled') {
+        setAllAlumni(alumniResponse.value.mentors || []);
         if (viewMode === 'alumniDetail' && selectedAlumni) {
-          const updated = allAlumniResponse.value.mentors.find(a => a.id === selectedAlumni.id);
+          const updated = alumniResponse.value.mentors.find((a) => a.id === selectedAlumni.id);
           if (updated) {
             setSelectedAlumni(updated);
           }
@@ -973,6 +1066,89 @@ export function AdminDashboard() {
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to reject user');
+    }
+  };
+
+  const handleDeactivateUser = async (userId: number, role: 'student' | 'alumni') => {
+    if (!window.confirm(`Are you sure you want to deactivate this ${role}?`)) {
+      return;
+    }
+
+    const reason = window.prompt('Enter deactivation reason (optional):');
+
+    try {
+      setError(null);
+      await apiRequest(API_ENDPOINTS.adminDeactivateUser(userId), {
+        method: 'POST',
+        body: JSON.stringify({ reason: reason?.trim() || undefined }),
+      });
+
+      setSuccessMessage(`${role === 'student' ? 'Student' : 'Alumni'} deactivated successfully.`);
+
+      const [studentsResponse, alumniResponse] = await Promise.allSettled([
+        apiRequest<{ students: Student[] }>(API_ENDPOINTS.adminAllStudents).catch(() => ({ students: [] })),
+        apiRequest<{ mentors: Alumni[] }>(API_ENDPOINTS.adminAllAlumni).catch(() => ({ mentors: [] })),
+      ]);
+
+      if (studentsResponse.status === 'fulfilled') {
+        setAllStudents(studentsResponse.value.students || []);
+        if (viewMode === 'studentDetail' && selectedStudent) {
+          const updated = studentsResponse.value.students.find((s) => s.id === selectedStudent.id);
+          if (updated) {
+            setSelectedStudent(updated);
+          }
+        }
+      }
+
+      if (alumniResponse.status === 'fulfilled') {
+        setAllAlumni(alumniResponse.value.mentors || []);
+        if (viewMode === 'alumniDetail' && selectedAlumni) {
+          const updated = alumniResponse.value.mentors.find((a) => a.id === selectedAlumni.id);
+          if (updated) {
+            setSelectedAlumni(updated);
+          }
+        }
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to deactivate user');
+    }
+  };
+
+  const handleReactivateUser = async (userId: number, role: 'student' | 'alumni') => {
+    try {
+      setError(null);
+      await apiRequest(API_ENDPOINTS.adminReactivateUser(userId), {
+        method: 'POST',
+      });
+
+      setSuccessMessage(`${role === 'student' ? 'Student' : 'Alumni'} reactivated successfully.`);
+
+      const [studentsResponse, alumniResponse] = await Promise.allSettled([
+        apiRequest<{ students: Student[] }>(API_ENDPOINTS.adminAllStudents).catch(() => ({ students: [] })),
+        apiRequest<{ mentors: Alumni[] }>(API_ENDPOINTS.adminAllAlumni).catch(() => ({ mentors: [] })),
+      ]);
+
+      if (studentsResponse.status === 'fulfilled') {
+        setAllStudents(studentsResponse.value.students || []);
+        if (viewMode === 'studentDetail' && selectedStudent) {
+          const updated = studentsResponse.value.students.find((s) => s.id === selectedStudent.id);
+          if (updated) {
+            setSelectedStudent(updated);
+          }
+        }
+      }
+
+      if (alumniResponse.status === 'fulfilled') {
+        setAllAlumni(alumniResponse.value.mentors || []);
+        if (viewMode === 'alumniDetail' && selectedAlumni) {
+          const updated = alumniResponse.value.mentors.find((a) => a.id === selectedAlumni.id);
+          if (updated) {
+            setSelectedAlumni(updated);
+          }
+        }
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to reactivate user');
     }
   };
 
@@ -990,7 +1166,7 @@ export function AdminDashboard() {
       setSuccessMessage('Your account has been deactivated.');
       
       // Refresh admins list
-      const response = await apiRequest<{ admins: Array<{ id: number; name: string; email: string; isActive: boolean; passwordUpdatedAt: string | null; createdAt: string }> }>(API_ENDPOINTS.adminListAdmins);
+      const response = await apiRequest<{ admins: Array<{ id: number; name: string; email: string; isActive: boolean; passwordUpdatedAt: string | null; createdAt: string; profilePhotoFilePath?: string | null }> }>(API_ENDPOINTS.adminListAdmins);
       setAdmins(response.admins || []);
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Failed to deactivate account';
@@ -1010,13 +1186,39 @@ export function AdminDashboard() {
       setSuccessMessage('Admin account reactivated successfully.');
       
       // Refresh admins list
-      const response = await apiRequest<{ admins: Array<{ id: number; name: string; email: string; isActive: boolean; passwordUpdatedAt: string | null; createdAt: string }> }>(API_ENDPOINTS.adminListAdmins);
+      const response = await apiRequest<{ admins: Array<{ id: number; name: string; email: string; isActive: boolean; passwordUpdatedAt: string | null; createdAt: string; profilePhotoFilePath?: string | null }> }>(API_ENDPOINTS.adminListAdmins);
       setAdmins(response.admins || []);
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Failed to reactivate admin';
       setError(errorMsg);
     } finally {
       setProcessingAdminId(null);
+    }
+  };
+
+  const handleDeleteVerificationCode = async (codeId: number) => {
+    if (!window.confirm('Are you sure you want to delete this verification code?')) {
+      return;
+    }
+
+    try {
+      setError(null);
+      await apiRequest(API_ENDPOINTS.adminDeleteVerificationCode(codeId), { method: 'DELETE' });
+
+      // Optimistically remove, then re-fetch to ensure sync with backend filters
+      setVerificationCodes(prev => prev.filter(code => code.id !== codeId));
+
+      try {
+        const refreshed = await apiRequest<{ codes: Array<{ id: number; email: string; code: string; purpose: string; expiresAt: string; usedAt: string | null; createdAt: string; status: 'active' | 'expired' | 'used' }> }>(API_ENDPOINTS.adminVerificationCodes);
+        setVerificationCodes(refreshed.codes || []);
+      } catch (refreshErr) {
+        console.warn('Failed to refresh verification codes after delete:', refreshErr);
+      }
+
+      setSuccessMessage('Verification code deleted successfully');
+      setTimeout(() => setSuccessMessage(null), 3000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to delete verification code');
     }
   };
 
@@ -1028,12 +1230,14 @@ export function AdminDashboard() {
       // Validate file type
       if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
         setProfilePhotoError('Only JPEG, PNG, and WebP images are allowed');
+        setUploadingProfilePhoto(false);
         return;
       }
 
       // Validate file size (2MB)
       if (file.size > 2 * 1024 * 1024) {
         setProfilePhotoError('File size must not exceed 2MB');
+        setUploadingProfilePhoto(false);
         return;
       }
 
@@ -1049,10 +1253,10 @@ export function AdminDashboard() {
         }
       );
 
-      // Update local user state with new photo URL
-      if (user) {
-        user.profilePhotoFilePath = response.profilePhotoUrl;
-      }
+      // Update AuthContext with latest user from server
+      setUserState(response.user);
+      localStorage.setItem('auth_user', JSON.stringify(response.user));
+      setProfilePhotoVersion((v) => v + 1); // cache-bust freshly uploaded photo
 
       setSuccessMessage('Profile photo uploaded successfully');
       setTimeout(() => setSuccessMessage(null), 3000);
@@ -1062,6 +1266,82 @@ export function AdminDashboard() {
     } finally {
       setUploadingProfilePhoto(false);
     }
+  };
+
+  const handleRemoveProfilePhoto = async () => {
+    if (!window.confirm('Remove profile photo?')) {
+      return;
+    }
+
+    try {
+      setProfilePhotoError(null);
+      setUploadingProfilePhoto(true);
+
+      const response = await apiRequest<{ user: any }>(
+        API_ENDPOINTS.deleteProfilePhoto,
+        {
+          method: 'DELETE',
+        }
+      );
+
+      // Update AuthContext with latest user from server
+      setUserState(response.user);
+      localStorage.setItem('auth_user', JSON.stringify(response.user));
+      setProfilePhotoVersion((v) => v + 1);
+      localStorage.setItem('auth_user', JSON.stringify(response.user));
+
+      setSuccessMessage('Profile photo removed successfully');
+      setTimeout(() => setSuccessMessage(null), 3000);
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : 'Failed to remove profile photo';
+      setProfilePhotoError(errorMsg);
+    } finally {
+      setUploadingProfilePhoto(false);
+    }
+  };
+
+  const handleOpenCreateMatchModal = async () => {
+    try {
+      setIsLoadingMatchOptions(true);
+      setMatchOptionsError(null);
+      setSelectedStudentForMatch(null);
+      setSelectedAlumniForMatch(null);
+      setMatchCoverLetter('');
+
+      // Fetch students and alumni in parallel
+      const [studentsResponse, alumniResponse] = await Promise.all([
+        apiRequest<{ students: Student[] }>(API_ENDPOINTS.adminAllStudents).catch(() => ({ students: [] })),
+        apiRequest<{ mentors: Alumni[] }>(API_ENDPOINTS.adminAllAlumni).catch(() => ({ mentors: [] }))
+      ]);
+
+      const students = (studentsResponse.students || []).map(s => ({
+        id: s.id,
+        name: s.name,
+        email: s.email,
+        studentId: s.studentId
+      }));
+
+      const alumni = (alumniResponse.mentors || []).map(a => ({
+        id: a.id,
+        name: a.name,
+        email: a.email,
+        degree: a.currentCompany
+      }));
+
+      setMatchStudents(students);
+      setMatchAlumni(alumni);
+      setShowCreateMatchModal(true);
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : 'Failed to load students and alumni';
+      setMatchOptionsError(errorMsg);
+      setIsLoadingMatchOptions(false);
+    } finally {
+      setIsLoadingMatchOptions(false);
+    }
+  };
+
+  const handleRetryLoadMatchOptions = async () => {
+    await handleOpenCreateMatchModal();
   };
 
   return (
@@ -1130,73 +1410,14 @@ export function AdminDashboard() {
           }}>
             <h3 style={{ fontSize: '1.25rem', fontWeight: 600, marginBottom: '1rem' }}>My Profile</h3>
 
-            {/* Profile Photo Section */}
-            <div style={{ marginBottom: '1.5rem', textAlign: 'center' }}>
-              <div style={{ 
-                width: '80px', 
-                height: '80px', 
-                margin: '0 auto 1rem', 
-                borderRadius: '50%', 
-                backgroundColor: '#e5e7eb',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                overflow: 'hidden',
-                border: '2px solid #d1d5db'
-              }}>
-                {user?.profilePhotoFilePath ? (
-                  <img 
-                    src={`${API_BASE_URL}${user.profilePhotoFilePath}`} 
-                    alt={user.name}
-                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                  />
-                ) : (
-                  <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#6b7280' }}>
-                    {user?.name?.split(' ').map(n => n[0]).join('').toUpperCase() || 'A'}
-                  </div>
-                )}
-              </div>
-              
-              {profilePhotoError && (
-                <div style={{ marginBottom: '0.75rem', padding: '0.5rem', backgroundColor: '#fef2f2', border: '1px solid #fecaca', borderRadius: '0.5rem', color: '#b91c1c', fontSize: '0.8rem' }}>
-                  {profilePhotoError}
-                </div>
-              )}
-
-              <input
-                type="file"
-                id="profilePhotoInput"
-                accept="image/jpeg,image/png,image/webp"
-                style={{ display: 'none' }}
-                onChange={(e) => {
-                  if (e.target.files?.[0]) {
-                    handleUploadProfilePhoto(e.target.files[0]);
-                  }
-                }}
-                disabled={uploadingProfilePhoto}
-              />
-              <button
-                type="button"
-                onClick={() => document.getElementById('profilePhotoInput')?.click()}
-                disabled={uploadingProfilePhoto}
-                style={{
-                  backgroundColor: uploadingProfilePhoto ? '#9ca3af' : '#D50000',
-                  color: 'white',
-                  padding: '0.5rem 1rem',
-                  borderRadius: '0.5rem',
-                  border: 'none',
-                  cursor: uploadingProfilePhoto ? 'not-allowed' : 'pointer',
-                  fontSize: '0.875rem',
-                  fontWeight: 500,
-                  width: '100%'
-                }}
-              >
-                {uploadingProfilePhoto ? 'Uploading...' : 'Upload Photo'}
-              </button>
-              <p style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '0.5rem' }}>
-                JPEG, PNG, or WebP • Max 2MB
-              </p>
-            </div>
+            <ProfilePhotoUploader
+              photoUrl={effectiveUser?.profilePhotoFilePath ? `${normalizedApiBaseUrl}${effectiveUser.profilePhotoFilePath}?v=${profilePhotoVersion}` : null}
+              initials={effectiveUser?.name?.split(' ').map(n => n[0]).join('').toUpperCase() || 'A'}
+              onUpload={handleUploadProfilePhoto}
+              onRemove={handleRemoveProfilePhoto}
+              isUploading={uploadingProfilePhoto}
+              errorMessage={profilePhotoError}
+            />
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '1.5rem', padding: '1rem', border: '1px solid #e5e7eb', borderRadius: '0.75rem', backgroundColor: '#f9fafb' }}>
               <div>
@@ -1254,7 +1475,7 @@ export function AdminDashboard() {
                     <button
                       type="button"
                       onClick={() => setShowCurrentPassword((prev) => !prev)}
-                      aria-label={showCurrentPassword ? 'Hide current password' : 'Show current password'}
+                      aria-label="Toggle password visibility"
                       disabled={updatingPassword}
                       style={{
                         position: 'absolute',
@@ -1263,10 +1484,13 @@ export function AdminDashboard() {
                         border: 'none',
                         color: '#6b7280',
                         cursor: updatingPassword ? 'not-allowed' : 'pointer',
-                        fontWeight: 600
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        padding: '0.25rem'
                       }}
                     >
-                      {showCurrentPassword ? 'Hide' : 'Show'}
+                      {showCurrentPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                     </button>
                   </div>
                 </div>
@@ -1288,7 +1512,7 @@ export function AdminDashboard() {
                     <button
                       type="button"
                       onClick={() => setShowNewPassword((prev) => !prev)}
-                      aria-label={showNewPassword ? 'Hide new password' : 'Show new password'}
+                      aria-label="Toggle password visibility"
                       disabled={updatingPassword}
                       style={{
                         position: 'absolute',
@@ -1297,10 +1521,13 @@ export function AdminDashboard() {
                         border: 'none',
                         color: '#6b7280',
                         cursor: updatingPassword ? 'not-allowed' : 'pointer',
-                        fontWeight: 600
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        padding: '0.25rem'
                       }}
                     >
-                      {showNewPassword ? 'Hide' : 'Show'}
+                      {showNewPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                     </button>
                   </div>
                 </div>
@@ -1322,7 +1549,7 @@ export function AdminDashboard() {
                     <button
                       type="button"
                       onClick={() => setShowConfirmPassword((prev) => !prev)}
-                      aria-label={showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'}
+                      aria-label="Toggle password visibility"
                       disabled={updatingPassword}
                       style={{
                         position: 'absolute',
@@ -1331,10 +1558,13 @@ export function AdminDashboard() {
                         border: 'none',
                         color: '#6b7280',
                         cursor: updatingPassword ? 'not-allowed' : 'pointer',
-                        fontWeight: 600
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        padding: '0.25rem'
                       }}
                     >
-                      {showConfirmPassword ? 'Hide' : 'Show'}
+                      {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                     </button>
                   </div>
                 </div>
@@ -1488,9 +1718,34 @@ export function AdminDashboard() {
           <>
             {/* Welcome Section */}
             <div style={{ marginBottom: '1.5rem' }}>
-              <h1 style={{ fontSize: '1.75rem', fontWeight: 'bold', marginBottom: '0.4rem' }}>
-                Welcome back, {user?.name}!
-              </h1>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.4rem' }}>
+                <div style={{
+                  width: '44px',
+                  height: '44px',
+                  borderRadius: '50%',
+                  overflow: 'hidden',
+                  border: '2px solid #e5e7eb',
+                  backgroundColor: '#e5e7eb',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}>
+                  {effectiveUser?.profilePhotoFilePath ? (
+                    <img
+                      src={`${normalizedApiBaseUrl}${effectiveUser.profilePhotoFilePath}?v=${profilePhotoVersion}`}
+                      alt={effectiveUser?.name || 'Profile'}
+                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    />
+                  ) : (
+                    <span style={{ fontWeight: 'bold', color: '#6b7280', fontSize: '1rem' }}>
+                      {(effectiveUser?.name || 'A').split(' ').map(n => n[0]).join('').toUpperCase()}
+                    </span>
+                  )}
+                </div>
+                <h1 style={{ fontSize: '1.75rem', fontWeight: 'bold' }}>
+                  Welcome back, {effectiveUser?.name}!
+                </h1>
+              </div>
               <p style={{ color: '#6b7280', fontSize: '0.95rem' }}>
                 Manage users, approvals, and invitations
               </p>
@@ -1775,62 +2030,89 @@ export function AdminDashboard() {
 
             {/* Invitation Code Management */}
             {viewMode === 'overview' && (
-              <div style={{ backgroundColor: 'white', borderRadius: '0.75rem', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', border: '1px solid #e5e7eb', padding: '1.5rem', marginBottom: '1.5rem' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
-                  <h2 style={{ fontSize: '1.25rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <div style={{ backgroundColor: 'white', borderRadius: '0.75rem', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', border: '1px solid #e5e7eb', marginBottom: '1.5rem' }}>
+                <div
+                  onClick={() => setAlumniInviteExpanded(!alumniInviteExpanded)}
+                  style={{
+                    padding: '1.5rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.75rem',
+                    cursor: 'pointer',
+                    userSelect: 'none',
+                    justifyContent: 'space-between'
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                     <Key size={20} color="#C8102E" />
-                    Alumni Invitation Code
-                  </h2>
-                  <button
-                    onClick={() => {
-                      setNewInvitationCode('');
-                      setShowInvitationModal(true);
-                    }}
+                    <h2 style={{ fontSize: '1.25rem', fontWeight: 600, margin: 0 }}>
+                      Alumni Invitation Code
+                    </h2>
+                  </div>
+                  <ChevronDown
+                    size={20}
+                    color="#6b7280"
                     style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.5rem',
-                      backgroundColor: '#C8102E',
-                      color: 'white',
-                      padding: '0.5rem 1rem',
-                      borderRadius: '0.5rem',
-                      border: 'none',
-                      cursor: 'pointer',
-                      fontSize: '0.875rem',
-                      fontWeight: 500
+                      transform: alumniInviteExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
+                      transition: 'transform 0.2s ease',
+                      flexShrink: 0
                     }}
-                  >
-                    <Plus size={16} />
-                    Generate New Code
-                  </button>
+                  />
                 </div>
-                
-                {invitationCode ? (
-                  <div style={{ 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    gap: '1rem', 
-                    padding: '1rem', 
-                    backgroundColor: '#f9fafb', 
-                    borderRadius: '0.5rem',
-                    border: '1px solid #e5e7eb'
-                  }}>
-                    <div style={{ flex: 1 }}>
-                      <p style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '0.25rem' }}>Current Active Code</p>
-                      <p style={{ fontSize: '1.125rem', fontWeight: 600, fontFamily: 'monospace', color: '#111827' }}>{invitationCode}</p>
+
+                {alumniInviteExpanded && (
+                  <div style={{ padding: '0 1.5rem 1.5rem 1.5rem', borderTop: '1px solid #e5e7eb' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem', gap: '1rem' }}>
+                      <button
+                        onClick={() => {
+                          setNewInvitationCode('');
+                          setShowInvitationModal(true);
+                        }}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.5rem',
+                          backgroundColor: '#C8102E',
+                          color: 'white',
+                          padding: '0.5rem 1rem',
+                          borderRadius: '0.5rem',
+                          border: 'none',
+                          cursor: 'pointer',
+                          fontSize: '0.875rem',
+                          fontWeight: 500
+                        }}
+                      >
+                        <Plus size={16} />
+                        Generate New Code
+                      </button>
                     </div>
-                    <button
-                      onClick={() => {
-                        navigator.clipboard.writeText(invitationCode);
-                        // Simple feedback - you could enhance this with a toast notification
-                        alert('Invitation code copied to clipboard!');
-                      }}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.5rem',
-                        backgroundColor: 'white',
-                        color: '#374151',
+                    
+                    {invitationCode ? (
+                      <div style={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        gap: '1rem', 
+                        padding: '1rem', 
+                        backgroundColor: '#f9fafb', 
+                        borderRadius: '0.5rem',
+                        border: '1px solid #e5e7eb'
+                      }}>
+                        <div style={{ flex: 1 }}>
+                          <p style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '0.25rem' }}>Current Active Code</p>
+                          <p style={{ fontSize: '1.125rem', fontWeight: 600, fontFamily: 'monospace', color: '#111827' }}>{invitationCode}</p>
+                        </div>
+                        <button
+                          onClick={() => {
+                            navigator.clipboard.writeText(invitationCode);
+                            // Simple feedback - you could enhance this with a toast notification
+                            alert('Invitation code copied to clipboard!');
+                          }}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.5rem',
+                            backgroundColor: 'white',
+                            color: '#374151',
                         padding: '0.5rem 1rem',
                         borderRadius: '0.5rem',
                         border: '1px solid #d1d5db',
@@ -1877,41 +2159,67 @@ export function AdminDashboard() {
                     </button>
                   </div>
                 )}
+                  </div>
+                )}
               </div>
             )}
 
             {/* Admin Invites (email-based) */}
             {viewMode === 'overview' && (
-              <div style={{ backgroundColor: 'white', borderRadius: '0.75rem', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', border: '1px solid #e5e7eb', padding: '1.5rem', marginBottom: '1.5rem' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
-                  <h2 style={{ fontSize: '1.25rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <div style={{ backgroundColor: 'white', borderRadius: '0.75rem', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', border: '1px solid #e5e7eb', marginBottom: '1.5rem' }}>
+                <div
+                  onClick={() => setAdminInvitesExpanded(!adminInvitesExpanded)}
+                  style={{
+                    padding: '1.5rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.75rem',
+                    cursor: 'pointer',
+                    userSelect: 'none',
+                    justifyContent: 'space-between'
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                     <Key size={20} color="#C8102E" />
-                    Admin Invites
-                  </h2>
+                    <h2 style={{ fontSize: '1.25rem', fontWeight: 600, margin: 0 }}>
+                      Admin Invites
+                    </h2>
+                  </div>
+                  <ChevronDown
+                    size={20}
+                    color="#6b7280"
+                    style={{
+                      transform: adminInvitesExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
+                      transition: 'transform 0.2s ease',
+                      flexShrink: 0
+                    }}
+                  />
                 </div>
 
-                <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center', marginBottom: '1rem' }}>
-                  <input
-                    type="email"
-                    value={newAdminInviteEmail}
-                    onChange={(e) => setNewAdminInviteEmail(e.target.value)}
-                    placeholder="staff@waikato.ac.nz"
-                    style={{
-                      flex: 1,
-                      minWidth: '240px',
-                      padding: '0.75rem',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '0.5rem',
-                      fontSize: '0.95rem',
-                      fontFamily: 'inherit',
-                      outline: 'none'
-                    }}
-                    onFocus={(e) => { e.currentTarget.style.borderColor = '#C8102E'; }}
-                    onBlur={(e) => { e.currentTarget.style.borderColor = '#d1d5db'; }}
-                  />
-                  <button
-                    onClick={handleCreateAdminInvite}
-                    disabled={creatingAdminInvite}
+                {adminInvitesExpanded && (
+                  <div style={{ padding: '0 1.5rem 1.5rem 1.5rem', borderTop: '1px solid #e5e7eb' }}>
+                    <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center', marginBottom: '1rem' }}>
+                      <input
+                        type="email"
+                        value={newAdminInviteEmail}
+                        onChange={(e) => setNewAdminInviteEmail(e.target.value)}
+                        placeholder="staff@waikato.ac.nz"
+                        style={{
+                          flex: 1,
+                          minWidth: '240px',
+                          padding: '0.75rem',
+                          border: '1px solid #d1d5db',
+                          borderRadius: '0.5rem',
+                          fontSize: '0.95rem',
+                          fontFamily: 'inherit',
+                          outline: 'none'
+                        }}
+                        onFocus={(e) => { e.currentTarget.style.borderColor = '#C8102E'; }}
+                        onBlur={(e) => { e.currentTarget.style.borderColor = '#d1d5db'; }}
+                      />
+                      <button
+                        onClick={handleCreateAdminInvite}
+                        disabled={creatingAdminInvite}
                     style={{
                       display: 'inline-flex',
                       alignItems: 'center',
@@ -1994,9 +2302,291 @@ export function AdminDashboard() {
                     )}
                   </div>
                 )}
+                  </div>
+                )}
               </div>
             )}
 
+            {/* Student Verification Codes */}
+            {viewMode === 'overview' && (
+              <div style={{ backgroundColor: 'white', borderRadius: '0.75rem', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', border: '1px solid #e5e7eb', marginBottom: '1.5rem' }}>
+                <div
+                  onClick={() => setVerificationCodesExpanded(!verificationCodesExpanded)}
+                  style={{
+                    padding: '1.5rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    cursor: 'pointer',
+                    userSelect: 'none'
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    <Key size={20} color="#C8102E" />
+                    <h2 style={{ fontSize: '1.25rem', fontWeight: 600, margin: 0 }}>
+                      Student Verification Codes
+                    </h2>
+                  </div>
+                  <ChevronDown
+                    size={20}
+                    color="#6b7280"
+                    style={{
+                      transform: verificationCodesExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
+                      transition: 'transform 0.2s ease',
+                      flexShrink: 0
+                    }}
+                  />
+                </div>
+
+                {verificationCodesExpanded && (
+                  <div style={{ padding: '0 1.5rem 1.5rem 1.5rem', borderTop: '1px solid #e5e7eb' }}>
+                    {verificationCodes.length === 0 ? (
+                      <div style={{ padding: '2rem', textAlign: 'center', color: '#6b7280' }}>
+                        <p>No verification codes generated yet.</p>
+                      </div>
+                    ) : (
+                      <div>
+                        <div style={{ marginBottom: '1rem' }}>
+                          <button
+                            onClick={() => setShowVerificationCodes(!showVerificationCodes)}
+                            style={{
+                              backgroundColor: showVerificationCodes ? '#fee2e2' : '#f0f9ff',
+                              color: showVerificationCodes ? '#991b1b' : '#0c4a6e',
+                              padding: '0.5rem 1rem',
+                              borderRadius: '0.5rem',
+                              border: `1px solid ${showVerificationCodes ? '#fecaca' : '#bae6fd'}`,
+                              cursor: 'pointer',
+                              fontSize: '0.875rem',
+                              fontWeight: 500
+                            }}
+                          >
+                            {showVerificationCodes ? 'Hide Codes' : 'Show Codes'}
+                          </button>
+                        </div>
+
+                        <div style={{ overflowX: 'auto' }}>
+                          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.875rem' }}>
+                            <thead>
+                              <tr style={{ backgroundColor: '#f9fafb', borderBottom: '1px solid #e5e7eb' }}>
+                                <th style={{ textAlign: 'left', padding: '0.75rem', color: '#374151', fontWeight: 600 }}>Email</th>
+                                {showVerificationCodes && (
+                                  <th style={{ textAlign: 'left', padding: '0.75rem', color: '#374151', fontWeight: 600 }}>Code</th>
+                                )}
+                                <th style={{ textAlign: 'left', padding: '0.75rem', color: '#374151', fontWeight: 600 }}>Status</th>
+                                <th style={{ textAlign: 'left', padding: '0.75rem', color: '#374151', fontWeight: 600 }}>Expires At</th>
+                                <th style={{ textAlign: 'left', padding: '0.75rem', color: '#374151', fontWeight: 600 }}>Action</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {verificationCodes.map(code => (
+                                <tr key={code.id} style={{ borderBottom: '1px solid #e5e7eb' }}>
+                                  <td style={{ padding: '0.75rem', color: '#111827' }}>{code.email}</td>
+                                  {showVerificationCodes && (
+                                    <td style={{ padding: '0.75rem', color: '#111827', fontFamily: 'monospace', fontSize: '0.8rem', fontWeight: 500 }}>{code.code}</td>
+                                  )}
+                                  <td style={{ padding: '0.75rem' }}>
+                                    <span style={{
+                                      display: 'inline-block',
+                                      padding: '0.25rem 0.75rem',
+                                      borderRadius: '9999px',
+                                      fontSize: '0.75rem',
+                                      fontWeight: 600,
+                                      backgroundColor: code.status === 'active' ? '#d1fae5' : (code.status === 'used' ? '#fecaca' : '#fed7aa'),
+                                      color: code.status === 'active' ? '#065f46' : (code.status === 'used' ? '#7f1d1d' : '#92400e')
+                                    }}>
+                                      {code.status.charAt(0).toUpperCase() + code.status.slice(1)}
+                                    </span>
+                                  </td>
+                                  <td style={{ padding: '0.75rem', color: '#6b7280', fontSize: '0.8rem' }}>{new Date(code.expiresAt).toLocaleString()}</td>
+                                  <td style={{ padding: '0.75rem', display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                                    <button
+                                      onClick={async () => {
+                                        try {
+                                          await navigator.clipboard.writeText(String(code.code));
+                                          setSuccessMessage('Code copied to clipboard');
+                                          setTimeout(() => setSuccessMessage(null), 2000);
+                                        } catch (err) {
+                                          try {
+                                            const textarea = document.createElement('textarea');
+                                            textarea.value = String(code.code);
+                                            document.body.appendChild(textarea);
+                                            textarea.select();
+                                            document.execCommand('copy');
+                                            document.body.removeChild(textarea);
+                                            setSuccessMessage('Code copied to clipboard');
+                                            setTimeout(() => setSuccessMessage(null), 2000);
+                                          } catch (copyErr) {
+                                            console.error('Copy failed:', copyErr);
+                                            setError('Failed to copy code');
+                                          }
+                                        }
+                                      }}
+                                      style={{
+                                        backgroundColor: 'white',
+                                        color: '#374151',
+                                        padding: '0.4rem 0.75rem',
+                                        borderRadius: '0.375rem',
+                                        border: '1px solid #d1d5db',
+                                        cursor: 'pointer',
+                                        fontSize: '0.75rem',
+                                        fontWeight: 500
+                                      }}
+                                    >
+                                      Copy
+                                    </button>
+                                    <button
+                                      onClick={() => handleDeleteVerificationCode(code.id)}
+                                      style={{
+                                        backgroundColor: '#fee2e2',
+                                        color: '#991b1b',
+                                        padding: '0.4rem 0.75rem',
+                                        borderRadius: '0.375rem',
+                                        border: '1px solid #fecaca',
+                                        cursor: 'pointer',
+                                        fontSize: '0.75rem',
+                                        fontWeight: 500
+                                      }}
+                                    >
+                                      Delete
+                                    </button>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Password Reset Requests */}
+            {viewMode === 'overview' && (
+              <div style={{ backgroundColor: 'white', borderRadius: '0.75rem', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', border: '1px solid #e5e7eb', marginBottom: '1.5rem' }}>
+                <div
+                  onClick={() => setPasswordResetExpanded(!passwordResetExpanded)}
+                  style={{
+                    padding: '1.5rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    cursor: 'pointer',
+                    userSelect: 'none'
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    <Key size={20} color="#C8102E" />
+                    <div>
+                      <h2 style={{ fontSize: '1.25rem', fontWeight: 600, margin: 0 }}>Password Reset Requests</h2>
+                      <p style={{ margin: '0.25rem 0 0', color: '#6b7280', fontSize: '0.9rem' }}>
+                        Active reset requests: {passwordResetRequests.length}
+                      </p>
+                    </div>
+                  </div>
+                  <ChevronDown
+                    size={20}
+                    color="#6b7280"
+                    style={{
+                      transform: passwordResetExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
+                      transition: 'transform 0.2s ease',
+                      flexShrink: 0
+                    }}
+                  />
+                </div>
+
+                {passwordResetExpanded && (
+                  <div style={{ padding: '0 1.5rem 1.5rem 1.5rem', borderTop: '1px solid #e5e7eb' }}>
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '1rem' }}>
+                      <button
+                        onClick={fetchPasswordResetRequests}
+                        disabled={passwordResetLoading}
+                        style={{
+                          backgroundColor: passwordResetLoading ? '#9ca3af' : '#C8102E',
+                          color: 'white',
+                          padding: '0.5rem 1rem',
+                          borderRadius: '0.5rem',
+                          border: 'none',
+                          cursor: passwordResetLoading ? 'not-allowed' : 'pointer',
+                          fontSize: '0.9rem',
+                          fontWeight: 600
+                        }}
+                      >
+                        {passwordResetLoading ? 'Refreshing...' : 'Refresh'}
+                      </button>
+                    </div>
+
+                    {passwordResetError && (
+                      <div style={{ marginBottom: '0.75rem', padding: '0.75rem', backgroundColor: '#fef2f2', border: '1px solid #fecaca', borderRadius: '0.5rem', color: '#991b1b', fontSize: '0.9rem' }}>
+                        {passwordResetError}
+                      </div>
+                    )}
+
+                    {passwordResetLoading && passwordResetRequests.length === 0 ? (
+                      <div style={{ padding: '1rem', color: '#6b7280' }}>Loading reset requests...</div>
+                    ) : passwordResetRequests.length === 0 ? (
+                      <div style={{ padding: '1rem', color: '#6b7280' }}>No active password reset requests.</div>
+                    ) : (
+                      <div style={{ overflowX: 'auto' }}>
+                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.875rem' }}>
+                          <thead>
+                            <tr style={{ backgroundColor: '#f9fafb', borderBottom: '1px solid #e5e7eb' }}>
+                              <th style={{ textAlign: 'left', padding: '0.75rem', color: '#374151', fontWeight: 600 }}>Email</th>
+                              <th style={{ textAlign: 'left', padding: '0.75rem', color: '#374151', fontWeight: 600 }}>Code</th>
+                              <th style={{ textAlign: 'left', padding: '0.75rem', color: '#374151', fontWeight: 600 }}>Status</th>
+                              <th style={{ textAlign: 'left', padding: '0.75rem', color: '#374151', fontWeight: 600 }}>Created At</th>
+                              <th style={{ textAlign: 'left', padding: '0.75rem', color: '#374151', fontWeight: 600 }}>Expires At</th>
+                              <th style={{ textAlign: 'left', padding: '0.75rem', color: '#374151', fontWeight: 600 }}>Action</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {passwordResetRequests.map((req) => (
+                              <tr key={req.id} style={{ borderBottom: '1px solid #e5e7eb' }}>
+                                <td style={{ padding: '0.75rem', color: '#111827' }}>{req.email}</td>
+                                <td style={{ padding: '0.75rem', color: '#111827', fontFamily: 'monospace', fontWeight: 600 }}>{req.code}</td>
+                                <td style={{ padding: '0.75rem' }}>
+                                  <span style={{
+                                    display: 'inline-block',
+                                    padding: '0.25rem 0.75rem',
+                                    borderRadius: '9999px',
+                                    fontSize: '0.75rem',
+                                    fontWeight: 600,
+                                    backgroundColor: '#d1fae5',
+                                    color: '#065f46'
+                                  }}>
+                                    Active
+                                  </span>
+                                </td>
+                                <td style={{ padding: '0.75rem', color: '#6b7280', fontSize: '0.8rem' }}>{new Date(req.createdAt).toLocaleString()}</td>
+                                <td style={{ padding: '0.75rem', color: '#6b7280', fontSize: '0.8rem' }}>{new Date(req.expiresAt).toLocaleString()}</td>
+                                <td style={{ padding: '0.75rem' }}>
+                                  <button
+                                    onClick={() => navigator.clipboard.writeText(req.code)}
+                                    style={{
+                                      backgroundColor: 'white',
+                                      color: '#374151',
+                                      padding: '0.4rem 0.75rem',
+                                      borderRadius: '0.375rem',
+                                      border: '1px solid #d1d5db',
+                                      cursor: 'pointer',
+                                      fontSize: '0.8rem',
+                                      fontWeight: 600
+                                    }}
+                                  >
+                                    Copy
+                                  </button>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
             {/* All Students List */}
             {viewMode === 'students' && (() => {
               // Get student match statuses - priority: accepted > confirmed > pending
@@ -2162,9 +2752,12 @@ export function AdminDashboard() {
                         }}
                       >
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                          <div>
-                            <h3 style={{ fontWeight: 600, marginBottom: '0.25rem' }}>{student.name}</h3>
-                            <p style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '0.25rem' }}>{student.email}</p>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                            <Avatar name={student.name} photoPath={student.profilePhotoFilePath} size={32} />
+                            <div>
+                              <h3 style={{ fontWeight: 600, marginBottom: '0.25rem' }}>{student.name}</h3>
+                              <p style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '0.25rem' }}>{student.email}</p>
+                            </div>
                             <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginTop: '0.5rem', flexWrap: 'wrap' }}>
                               <span style={{
                                 fontSize: '0.75rem',
@@ -2253,33 +2846,72 @@ export function AdminDashboard() {
             {/* Student Detail View */}
             {viewMode === 'studentDetail' && selectedStudent && (
               <div style={{ backgroundColor: 'white', borderRadius: '0.75rem', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', border: '1px solid #e5e7eb', padding: '1.5rem' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem' }}>
-                  <button
-                    onClick={handleBackToStudentsList}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      width: '36px',
-                      height: '36px',
-                      borderRadius: '0.5rem',
-                      border: '1px solid #d1d5db',
-                      backgroundColor: 'white',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.borderColor = '#C8102E';
-                      e.currentTarget.style.backgroundColor = '#f9fafb';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.borderColor = '#d1d5db';
-                      e.currentTarget.style.backgroundColor = 'white';
-                    }}
-                  >
-                    <ArrowLeft size={20} />
-                  </button>
-                  <h2 style={{ fontSize: '1.25rem', fontWeight: 600 }}>Student Details</h2>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', marginBottom: '1.5rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                    <button
+                      onClick={handleBackToStudentsList}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        width: '36px',
+                        height: '36px',
+                        borderRadius: '0.5rem',
+                        border: '1px solid #d1d5db',
+                        backgroundColor: 'white',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.borderColor = '#C8102E';
+                        e.currentTarget.style.backgroundColor = '#f9fafb';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.borderColor = '#d1d5db';
+                        e.currentTarget.style.backgroundColor = 'white';
+                      }}
+                    >
+                      <ArrowLeft size={20} />
+                    </button>
+                    <h2 style={{ fontSize: '1.25rem', fontWeight: 600 }}>Student Details</h2>
+                  </div>
+                  {selectedStudent.id !== currentUserId && (
+                    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                      {selectedStudent.isActive === false ? (
+                        <button
+                          onClick={() => handleReactivateUser(selectedStudent.id, 'student')}
+                          style={{
+                            backgroundColor: '#16a34a',
+                            color: 'white',
+                            padding: '0.5rem 1rem',
+                            borderRadius: '0.5rem',
+                            cursor: 'pointer',
+                            border: 'none',
+                            fontSize: '0.875rem',
+                            fontWeight: 600
+                          }}
+                        >
+                          Reactivate
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => handleDeactivateUser(selectedStudent.id, 'student')}
+                          style={{
+                            backgroundColor: '#dc2626',
+                            color: 'white',
+                            padding: '0.5rem 1rem',
+                            borderRadius: '0.5rem',
+                            cursor: 'pointer',
+                            border: 'none',
+                            fontSize: '0.875rem',
+                            fontWeight: 600
+                          }}
+                        >
+                          Deactivate
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
@@ -2419,7 +3051,7 @@ export function AdminDashboard() {
                     <h3 style={{ fontSize: '1.125rem', fontWeight: 700, marginBottom: '1rem', color: '#111827' }}>Mentoring Goals</h3>
                     {selectedStudent.mentoringGoals && selectedStudent.mentoringGoals.length > 0 ? (
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-                        {selectedStudent.mentoringGoals.map((goal, index) => (
+                        {selectedStudent.mentoringGoals.map((goal: string, index: number) => (
                           <span
                             key={index}
                             style={{
@@ -2444,7 +3076,7 @@ export function AdminDashboard() {
                     <h3 style={{ fontSize: '1.125rem', fontWeight: 700, marginBottom: '1rem', color: '#111827' }}>Skills Wanted</h3>
                     {selectedStudent.skillsWanted && selectedStudent.skillsWanted.length > 0 ? (
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-                        {selectedStudent.skillsWanted.map((skill, index) => (
+                        {selectedStudent.skillsWanted.map((skill: string, index: number) => (
                           <span
                             key={index}
                             style={{
@@ -3039,14 +3671,17 @@ export function AdminDashboard() {
                           }}
                         >
                           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                            <div>
-                              <h3 style={{ fontWeight: 600, marginBottom: '0.25rem' }}>{alumni.name}</h3>
-                              <p style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '0.25rem' }}>{alumni.email}</p>
-                              {alumni.currentCompany && (
-                                <p style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '0.25rem' }}>
-                                  {alumni.currentPosition ? `${alumni.currentPosition} at ` : ''}{alumni.currentCompany}
-                                </p>
-                              )}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                              <Avatar name={alumni.name} photoPath={alumni.profilePhotoFilePath} size={32} />
+                              <div>
+                                <h3 style={{ fontWeight: 600, marginBottom: '0.25rem' }}>{alumni.name}</h3>
+                                <p style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '0.25rem' }}>{alumni.email}</p>
+                                {alumni.currentCompany && (
+                                  <p style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '0.25rem' }}>
+                                    {alumni.currentPosition ? `${alumni.currentPosition} at ` : ''}{alumni.currentCompany}
+                                  </p>
+                                )}
+                              </div>
                               <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginTop: '0.5rem', flexWrap: 'wrap' }}>
                                 {(() => {
                                   if (matchStatus === 'accepted') {
@@ -3112,33 +3747,72 @@ export function AdminDashboard() {
             {/* Alumni Detail View */}
             {viewMode === 'alumniDetail' && selectedAlumni && (
               <div style={{ backgroundColor: 'white', borderRadius: '0.75rem', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', border: '1px solid #e5e7eb', padding: '1.5rem' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem' }}>
-                  <button
-                    onClick={handleBackToAlumniList}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      width: '36px',
-                      height: '36px',
-                      borderRadius: '0.5rem',
-                      border: '1px solid #d1d5db',
-                      backgroundColor: 'white',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.borderColor = '#C8102E';
-                      e.currentTarget.style.backgroundColor = '#f9fafb';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.borderColor = '#d1d5db';
-                      e.currentTarget.style.backgroundColor = 'white';
-                    }}
-                  >
-                    <ArrowLeft size={20} />
-                  </button>
-                  <h2 style={{ fontSize: '1.25rem', fontWeight: 600 }}>Alumni Details</h2>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', marginBottom: '1.5rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                    <button
+                      onClick={handleBackToAlumniList}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        width: '36px',
+                        height: '36px',
+                        borderRadius: '0.5rem',
+                        border: '1px solid #d1d5db',
+                        backgroundColor: 'white',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.borderColor = '#C8102E';
+                        e.currentTarget.style.backgroundColor = '#f9fafb';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.borderColor = '#d1d5db';
+                        e.currentTarget.style.backgroundColor = 'white';
+                      }}
+                    >
+                      <ArrowLeft size={20} />
+                    </button>
+                    <h2 style={{ fontSize: '1.25rem', fontWeight: 600 }}>Alumni Details</h2>
+                  </div>
+                  {selectedAlumni.id !== currentUserId && (
+                    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                      {selectedAlumni.isActive === false ? (
+                        <button
+                          onClick={() => handleReactivateUser(selectedAlumni.id, 'alumni')}
+                          style={{
+                            backgroundColor: '#16a34a',
+                            color: 'white',
+                            padding: '0.5rem 1rem',
+                            borderRadius: '0.5rem',
+                            cursor: 'pointer',
+                            border: 'none',
+                            fontSize: '0.875rem',
+                            fontWeight: 600
+                          }}
+                        >
+                          Reactivate
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => handleDeactivateUser(selectedAlumni.id, 'alumni')}
+                          style={{
+                            backgroundColor: '#dc2626',
+                            color: 'white',
+                            padding: '0.5rem 1rem',
+                            borderRadius: '0.5rem',
+                            cursor: 'pointer',
+                            border: 'none',
+                            fontSize: '0.875rem',
+                            fontWeight: 600
+                          }}
+                        >
+                          Deactivate
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
@@ -3249,7 +3923,7 @@ export function AdminDashboard() {
                     <div>
                       <h3 style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '1rem', color: '#111827' }}>Mentoring Goals</h3>
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-                        {selectedAlumni.mentoringGoals.map((goal, index) => (
+                        {selectedAlumni.mentoringGoals.map((goal: string, index: number) => (
                           <span
                             key={index}
                             style={{
@@ -3272,7 +3946,7 @@ export function AdminDashboard() {
                     <div>
                       <h3 style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '1rem', color: '#111827' }}>Skills Offered</h3>
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-                        {selectedAlumni.skillsOffered.map((skill, index) => (
+                        {selectedAlumni.skillsOffered.map((skill: string, index: number) => (
                           <span
                             key={index}
                             style={{
@@ -3352,9 +4026,12 @@ export function AdminDashboard() {
                         }}
                       >
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                          <div>
-                            <h3 style={{ fontWeight: 600, marginBottom: '0.25rem' }}>{student.name}</h3>
-                            <p style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '0.25rem' }}>{student.email}</p>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                            <Avatar name={student.name} photoPath={student.profilePhotoFilePath} size={32} />
+                            <div>
+                              <h3 style={{ fontWeight: 600, marginBottom: '0.25rem' }}>{student.name}</h3>
+                              <p style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '0.25rem' }}>{student.email}</p>
+                            </div>
                             <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginTop: '0.5rem' }}>
                               <span style={{
                                 fontSize: '0.75rem',
@@ -3599,7 +4276,10 @@ export function AdminDashboard() {
 
                             return (
                               <tr key={admin.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                                <td style={{ padding: '0.75rem', fontSize: '0.95rem', color: '#111827', fontWeight: 500 }}>{admin.name}</td>
+                                <td style={{ padding: '0.75rem', fontSize: '0.95rem', color: '#111827', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                  <Avatar name={admin.name} photoPath={admin.profilePhotoFilePath} size={32} />
+                                  {admin.name}
+                                </td>
                                 <td style={{ padding: '0.75rem', fontSize: '0.95rem', color: '#374151' }}>{admin.email}</td>
                                 <td style={{ padding: '0.75rem', fontSize: '0.9rem' }}>
                                   <span style={{
@@ -3620,84 +4300,104 @@ export function AdminDashboard() {
                                   {new Date(admin.createdAt).toLocaleDateString()}
                                 </td>
                                 <td style={{ padding: '0.75rem', fontSize: '0.9rem' }}>
-                                  <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                    {isCurrentUser && isActive ? (
-                                      <button
-                                        onClick={() => handleDeactivateAdmin(admin.id)}
-                                        disabled={processingAdminId === admin.id}
-                                        style={{
-                                          display: 'inline-flex',
-                                          alignItems: 'center',
-                                          gap: '0.25rem',
-                                          backgroundColor: processingAdminId === admin.id ? '#9ca3af' : '#dc2626',
-                                          color: 'white',
+                                  {(() => {
+                                    const actionButtons: JSX.Element[] = [];
+
+                                    if (isCurrentUser && isActive) {
+                                      actionButtons.push(
+                                        <button
+                                          key="deactivate"
+                                          onClick={() => handleDeactivateAdmin(admin.id)}
+                                          disabled={processingAdminId === admin.id}
+                                          style={{
+                                            display: 'inline-flex',
+                                            alignItems: 'center',
+                                            gap: '0.25rem',
+                                            backgroundColor: processingAdminId === admin.id ? '#9ca3af' : '#dc2626',
+                                            color: 'white',
+                                            padding: '0.35rem 0.75rem',
+                                            borderRadius: '0.375rem',
+                                            border: 'none',
+                                            cursor: processingAdminId === admin.id ? 'not-allowed' : 'pointer',
+                                            fontSize: '0.8rem',
+                                            fontWeight: 500
+                                          }}
+                                          title="You can only deactivate your own account"
+                                        >
+                                          {processingAdminId === admin.id ? (
+                                            <>
+                                              <div style={{ width: '12px', height: '12px', border: '2px solid white', borderTop: '2px solid transparent', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+                                              Deactivating...
+                                            </>
+                                          ) : (
+                                            <>
+                                              <XCircle size={14} />
+                                              Deactivate
+                                            </>
+                                          )}
+                                        </button>
+                                      );
+                                    }
+
+                                    if (!isCurrentUser && !isActive) {
+                                      actionButtons.push(
+                                        <button
+                                          key="reactivate"
+                                          onClick={() => handleReactivateAdmin(admin.id)}
+                                          disabled={processingAdminId === admin.id}
+                                          style={{
+                                            display: 'inline-flex',
+                                            alignItems: 'center',
+                                            gap: '0.25rem',
+                                            backgroundColor: processingAdminId === admin.id ? '#9ca3af' : '#16a34a',
+                                            color: 'white',
+                                            padding: '0.35rem 0.75rem',
+                                            borderRadius: '0.375rem',
+                                            border: 'none',
+                                            cursor: processingAdminId === admin.id ? 'not-allowed' : 'pointer',
+                                            fontSize: '0.8rem',
+                                            fontWeight: 500
+                                          }}
+                                          title="Only another admin can reactivate this account"
+                                        >
+                                          {processingAdminId === admin.id ? (
+                                            <>
+                                              <div style={{ width: '12px', height: '12px', border: '2px solid white', borderTop: '2px solid transparent', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+                                              Reactivating...
+                                            </>
+                                          ) : (
+                                            <>
+                                              <CheckCircle size={14} />
+                                              Reactivate
+                                            </>
+                                          )}
+                                        </button>
+                                      );
+                                    }
+
+                                    if (actionButtons.length === 0) {
+                                      return (
+                                        <span style={{
+                                          display: 'inline-block',
                                           padding: '0.35rem 0.75rem',
                                           borderRadius: '0.375rem',
-                                          border: 'none',
-                                          cursor: processingAdminId === admin.id ? 'not-allowed' : 'pointer',
+                                          backgroundColor: '#f3f4f6',
+                                          color: '#9ca3af',
                                           fontSize: '0.8rem',
-                                          fontWeight: 500
-                                        }}
-                                        title="You can only deactivate your own account"
-                                      >
-                                        {processingAdminId === admin.id ? (
-                                          <>
-                                            <div style={{ width: '12px', height: '12px', border: '2px solid white', borderTop: '2px solid transparent', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
-                                            Deactivating...
-                                          </>
-                                        ) : (
-                                          <>
-                                            <XCircle size={14} />
-                                            Deactivate
-                                          </>
-                                        )}
-                                      </button>
-                                    ) : !isCurrentUser && !isActive ? (
-                                      <button
-                                        onClick={() => handleReactivateAdmin(admin.id)}
-                                        disabled={processingAdminId === admin.id}
-                                        style={{
-                                          display: 'inline-flex',
-                                          alignItems: 'center',
-                                          gap: '0.25rem',
-                                          backgroundColor: processingAdminId === admin.id ? '#9ca3af' : '#16a34a',
-                                          color: 'white',
-                                          padding: '0.35rem 0.75rem',
-                                          borderRadius: '0.375rem',
-                                          border: 'none',
-                                          cursor: processingAdminId === admin.id ? 'not-allowed' : 'pointer',
-                                          fontSize: '0.8rem',
-                                          fontWeight: 500
-                                        }}
-                                        title="Only another admin can reactivate this account"
-                                      >
-                                        {processingAdminId === admin.id ? (
-                                          <>
-                                            <div style={{ width: '12px', height: '12px', border: '2px solid white', borderTop: '2px solid transparent', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
-                                            Reactivating...
-                                          </>
-                                        ) : (
-                                          <>
-                                            <CheckCircle size={14} />
-                                            Reactivate
-                                          </>
-                                        )}
-                                      </button>
-                                    ) : (
-                                      <span style={{
-                                        display: 'inline-block',
-                                        padding: '0.35rem 0.75rem',
-                                        borderRadius: '0.375rem',
-                                        backgroundColor: '#f3f4f6',
-                                        color: '#9ca3af',
-                                        fontSize: '0.8rem',
-                                        fontWeight: 500,
-                                        cursor: 'default'
-                                      }}>
-                                        {isCurrentUser && !isActive ? 'Account Inactive' : 'No Action'}
-                                      </span>
-                                    )}
-                                  </div>
+                                          fontWeight: 500,
+                                          cursor: 'default'
+                                        }}>
+                                          {isCurrentUser && !isActive ? 'Account Inactive' : 'No Action'}
+                                        </span>
+                                      );
+                                    }
+
+                                    return (
+                                      <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                                        {actionButtons}
+                                      </div>
+                                    );
+                                  })()}
                                 </td>
                               </tr>
                             );
@@ -3760,12 +4460,7 @@ export function AdminDashboard() {
                   <h2 style={{ fontSize: '1.5rem', fontWeight: 600 }}>Matches Management</h2>
                   </div>
                   <button
-                    onClick={() => {
-                      setSelectedStudentForMatch(null);
-                      setSelectedAlumniForMatch(null);
-                      setMatchCoverLetter('');
-                      setShowCreateMatchModal(true);
-                    }}
+                    onClick={handleOpenCreateMatchModal}
                     style={{
                       display: 'flex',
                       alignItems: 'center',
@@ -3878,15 +4573,21 @@ export function AdminDashboard() {
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                           <div style={{ flex: 1 }}>
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem', marginBottom: '0.5rem', alignItems: 'start' }}>
-                              <div style={{ minWidth: 0, width: '100%' }}>
-                                <p style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '0.25rem', height: '1rem' }}>Student</p>
-                                <p style={{ fontWeight: 600, marginBottom: '0.25rem', wordBreak: 'break-word', minHeight: '1.5rem' }}>{match.student.name}</p>
-                                <p style={{ fontSize: '0.875rem', color: '#6b7280', wordBreak: 'break-all', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{match.student.email}</p>
+                              <div style={{ minWidth: 0, width: '100%', display: 'flex', alignItems: 'start', gap: '0.75rem' }}>
+                                <Avatar name={match.student.name} photoPath={match.student.profilePhotoFilePath} size={32} />
+                                <div style={{ minWidth: 0, flex: 1 }}>
+                                  <p style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '0.25rem', height: '1rem' }}>Student</p>
+                                  <p style={{ fontWeight: 600, marginBottom: '0.25rem', wordBreak: 'break-word', minHeight: '1.5rem' }}>{match.student.name}</p>
+                                  <p style={{ fontSize: '0.875rem', color: '#6b7280', wordBreak: 'break-all', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{match.student.email}</p>
+                                </div>
                               </div>
-                              <div style={{ minWidth: 0, width: '100%' }}>
-                                <p style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '0.25rem', height: '1rem' }}>Alumni Mentor</p>
-                                <p style={{ fontWeight: 600, marginBottom: '0.25rem', wordBreak: 'break-word', minHeight: '1.5rem' }}>{match.alumni.name}</p>
-                                <p style={{ fontSize: '0.875rem', color: '#6b7280', wordBreak: 'break-all', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{match.alumni.email}</p>
+                              <div style={{ minWidth: 0, width: '100%', display: 'flex', alignItems: 'start', gap: '0.75rem' }}>
+                                <Avatar name={match.alumni.name} photoPath={match.alumni.profilePhotoFilePath} size={32} />
+                                <div style={{ minWidth: 0, flex: 1 }}>
+                                  <p style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '0.25rem', height: '1rem' }}>Alumni Mentor</p>
+                                  <p style={{ fontWeight: 600, marginBottom: '0.25rem', wordBreak: 'break-word', minHeight: '1.5rem' }}>{match.alumni.name}</p>
+                                  <p style={{ fontSize: '0.875rem', color: '#6b7280', wordBreak: 'break-all', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{match.alumni.email}</p>
+                                </div>
                               </div>
                             </div>
                             <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginTop: '0.5rem', flexWrap: 'wrap' }}>
@@ -4787,7 +5488,7 @@ export function AdminDashboard() {
                 <h4 style={{ fontSize: '1.125rem', fontWeight: 700, marginBottom: '0.75rem', color: '#111827' }}>Mentoring Goals</h4>
                 {selectedStudent.mentoringGoals && selectedStudent.mentoringGoals.length > 0 ? (
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-                    {selectedStudent.mentoringGoals.map((goal, index) => (
+                    {selectedStudent.mentoringGoals.map((goal: string, index: number) => (
                       <span key={index} style={{ padding: '0.375rem 0.75rem', backgroundColor: '#f3f4f6', borderRadius: '9999px', fontSize: '0.875rem', color: '#374151' }}>
                         {goal}
                       </span>
@@ -4803,7 +5504,7 @@ export function AdminDashboard() {
                 <h4 style={{ fontSize: '1.125rem', fontWeight: 700, marginBottom: '0.75rem', color: '#111827' }}>Skills Wanted</h4>
                 {selectedStudent.skillsWanted && selectedStudent.skillsWanted.length > 0 ? (
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-                    {selectedStudent.skillsWanted.map((skill, index) => (
+                    {selectedStudent.skillsWanted.map((skill: string, index: number) => (
                       <span key={index} style={{ padding: '0.375rem 0.75rem', backgroundColor: '#f3f4f6', borderRadius: '9999px', fontSize: '0.875rem', color: '#374151' }}>
                         {skill}
                       </span>
@@ -5329,7 +6030,7 @@ export function AdminDashboard() {
                 <div>
                   <h4 style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '0.75rem', color: '#111827' }}>Mentoring Goals</h4>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-                    {selectedAlumni.mentoringGoals.map((goal, index) => (
+                    {selectedAlumni.mentoringGoals.map((goal: string, index: number) => (
                       <span key={index} style={{ padding: '0.375rem 0.75rem', backgroundColor: '#f3f4f6', borderRadius: '9999px', fontSize: '0.875rem', color: '#374151' }}>
                         {goal}
                       </span>
@@ -5343,7 +6044,7 @@ export function AdminDashboard() {
                 <div>
                   <h4 style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '0.75rem', color: '#111827' }}>Skills Offered</h4>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-                    {selectedAlumni.skillsOffered.map((skill, index) => (
+                    {selectedAlumni.skillsOffered.map((skill: string, index: number) => (
                       <span key={index} style={{ padding: '0.375rem 0.75rem', backgroundColor: '#f3f4f6', borderRadius: '9999px', fontSize: '0.875rem', color: '#374151' }}>
                         {skill}
                       </span>
@@ -5557,6 +6258,35 @@ export function AdminDashboard() {
               Manually connect a student with an alumni mentor. The match will be created in "confirmed" status.
             </p>
 
+            {matchOptionsError && (
+              <div style={{
+                backgroundColor: '#fee2e2',
+                border: '1px solid #fecaca',
+                borderRadius: '0.5rem',
+                padding: '1rem',
+                marginBottom: '1rem',
+                fontSize: '0.875rem',
+                color: '#dc2626'
+              }}>
+                <p style={{ marginBottom: '0.5rem' }}>{matchOptionsError}</p>
+                <button
+                  onClick={handleRetryLoadMatchOptions}
+                  style={{
+                    backgroundColor: '#dc2626',
+                    color: 'white',
+                    padding: '0.4rem 0.75rem',
+                    borderRadius: '0.375rem',
+                    border: 'none',
+                    cursor: 'pointer',
+                    fontSize: '0.8rem',
+                    fontWeight: 500
+                  }}
+                >
+                  Retry
+                </button>
+              </div>
+            )}
+
             {error && (
               <div style={{
                 backgroundColor: '#fee2e2',
@@ -5580,9 +6310,10 @@ export function AdminDashboard() {
                 value={selectedStudentForMatch?.id || ''}
                 onChange={(e) => {
                   const studentId = parseInt(e.target.value, 10);
-                  const student = allStudents.find(u => u.id === studentId);
-                  setSelectedStudentForMatch(student || null);
+                  const student = matchStudents.find(u => u.id === studentId);
+                  setSelectedStudentForMatch(student ? { id: student.id, name: student.name, email: student.email, role: 'student', approvalStatus: 'approved', createdAt: '' } : null);
                 }}
+                disabled={isLoadingMatchOptions}
                 style={{
                   width: '100%',
                   padding: '0.75rem',
@@ -5592,25 +6323,23 @@ export function AdminDashboard() {
                   fontFamily: 'inherit',
                   outline: 'none',
                   transition: 'border-color 0.2s',
-                  backgroundColor: 'white',
-                  cursor: 'pointer'
+                  backgroundColor: isLoadingMatchOptions ? '#f3f4f6' : 'white',
+                  cursor: isLoadingMatchOptions ? 'not-allowed' : 'pointer',
+                  opacity: isLoadingMatchOptions ? 0.6 : 1
                 }}
                 onFocus={(e) => {
-                  e.currentTarget.style.borderColor = '#C8102E';
+                  if (!isLoadingMatchOptions) e.currentTarget.style.borderColor = '#C8102E';
                 }}
                 onBlur={(e) => {
                   e.currentTarget.style.borderColor = '#d1d5db';
                 }}
               >
-                <option value="">Select a student...</option>
-                {allStudents
-                  .filter((u: Student) => u.approvalStatus === 'approved')
-                  .sort((a: Student, b: Student) => a.name.localeCompare(b.name))
-                  .map((student: Student) => (
-                    <option key={student.id} value={student.id}>
-                      {student.name} ({student.email})
-                    </option>
-                  ))}
+                <option value="">{isLoadingMatchOptions ? 'Loading students…' : 'Select a student...'}</option>
+                {matchStudents.map((student) => (
+                  <option key={student.id} value={student.id}>
+                    {student.name} {student.studentId ? `(${student.studentId})` : ''} ({student.email})
+                  </option>
+                ))}
               </select>
             </div>
 
@@ -5623,9 +6352,10 @@ export function AdminDashboard() {
                 value={selectedAlumniForMatch?.id || ''}
                 onChange={(e) => {
                   const alumniId = parseInt(e.target.value, 10);
-                  const alumni = allAlumni.find(u => u.id === alumniId);
-                  setSelectedAlumniForMatch(alumni || null);
+                  const alumni = matchAlumni.find(u => u.id === alumniId);
+                  setSelectedAlumniForMatch(alumni ? { id: alumni.id, name: alumni.name, email: alumni.email, role: 'alumni', approvalStatus: 'approved', createdAt: '' } : null);
                 }}
+                disabled={isLoadingMatchOptions}
                 style={{
                   width: '100%',
                   padding: '0.75rem',
@@ -5635,25 +6365,23 @@ export function AdminDashboard() {
                   fontFamily: 'inherit',
                   outline: 'none',
                   transition: 'border-color 0.2s',
-                  backgroundColor: 'white',
-                  cursor: 'pointer'
+                  backgroundColor: isLoadingMatchOptions ? '#f3f4f6' : 'white',
+                  cursor: isLoadingMatchOptions ? 'not-allowed' : 'pointer',
+                  opacity: isLoadingMatchOptions ? 0.6 : 1
                 }}
                 onFocus={(e) => {
-                  e.currentTarget.style.borderColor = '#C8102E';
+                  if (!isLoadingMatchOptions) e.currentTarget.style.borderColor = '#C8102E';
                 }}
                 onBlur={(e) => {
                   e.currentTarget.style.borderColor = '#d1d5db';
                 }}
               >
-                <option value="">Select an alumni...</option>
-                {allAlumni
-                  .filter((u: Alumni) => u.approvalStatus === 'approved')
-                  .sort((a: Alumni, b: Alumni) => a.name.localeCompare(b.name))
-                  .map((alumni: Alumni) => (
-                    <option key={alumni.id} value={alumni.id}>
-                      {alumni.name} ({alumni.email})
-                    </option>
-                  ))}
+                <option value="">{isLoadingMatchOptions ? 'Loading alumni…' : 'Select an alumni...'}</option>
+                {matchAlumni.map((alumni) => (
+                  <option key={alumni.id} value={alumni.id}>
+                    {alumni.name} ({alumni.email})
+                  </option>
+                ))}
               </select>
             </div>
 
@@ -5696,31 +6424,32 @@ export function AdminDashboard() {
                   setSelectedAlumniForMatch(null);
                   setMatchCoverLetter('');
                   setError(null);
+                  setMatchOptionsError(null);
                 }}
-                disabled={creatingMatch}
+                disabled={creatingMatch || isLoadingMatchOptions}
                 style={{
                   border: '1px solid #d1d5db',
                   color: '#374151',
                   padding: '0.5rem 1rem',
                   borderRadius: '0.5rem',
-                  cursor: creatingMatch ? 'not-allowed' : 'pointer',
+                  cursor: creatingMatch || isLoadingMatchOptions ? 'not-allowed' : 'pointer',
                   backgroundColor: 'white',
                   fontSize: '0.875rem',
                   fontWeight: 500,
-                  opacity: creatingMatch ? 0.6 : 1
+                  opacity: creatingMatch || isLoadingMatchOptions ? 0.6 : 1
                 }}
               >
                 Cancel
               </button>
               <button
                 onClick={() => handleCreateMatch()}
-                disabled={creatingMatch || !selectedStudentForMatch || !selectedAlumniForMatch}
+                disabled={creatingMatch || isLoadingMatchOptions || !selectedStudentForMatch || !selectedAlumniForMatch}
                 style={{
-                  backgroundColor: creatingMatch || !selectedStudentForMatch || !selectedAlumniForMatch ? '#9ca3af' : '#C8102E',
+                  backgroundColor: creatingMatch || isLoadingMatchOptions || !selectedStudentForMatch || !selectedAlumniForMatch ? '#9ca3af' : '#C8102E',
                   color: 'white',
                   padding: '0.5rem 1rem',
                   borderRadius: '0.5rem',
-                  cursor: creatingMatch || !selectedStudentForMatch || !selectedAlumniForMatch ? 'not-allowed' : 'pointer',
+                  cursor: creatingMatch || isLoadingMatchOptions || !selectedStudentForMatch || !selectedAlumniForMatch ? 'not-allowed' : 'pointer',
                   border: 'none',
                   display: 'flex',
                   alignItems: 'center',
@@ -5748,3 +6477,5 @@ export function AdminDashboard() {
     </div>
   );
 }
+
+export default AdminDashboard;

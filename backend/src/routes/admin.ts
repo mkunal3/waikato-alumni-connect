@@ -67,11 +67,122 @@ router.get(
   }
 );
 
+/**
+ * POST /admin/users/:userId/deactivate
+ * Deactivate a user (student or alumni). Prevents self-deactivation and last-admin deactivation.
+ * Requires admin role.
+ */
+router.post(
+  "/users/:userId/deactivate",
+  authenticate,
+  requireAdmin,
+  async (req: AuthRequest, res: Response): Promise<Response | void> => {
+    try {
+      const userId = parseInt(req.params.userId, 10);
+      if (isNaN(userId)) {
+        return res.status(400).json({ error: "Invalid user ID" });
+      }
+
+      if (req.userId === userId) {
+        return res.status(400).json({ error: "You cannot deactivate your own account." });
+      }
+
+      const targetUser = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { id: true, name: true, email: true, role: true, isActive: true },
+      });
+
+      if (!targetUser) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      if (targetUser.role === "admin") {
+        const activeAdmins = await prisma.user.count({
+          where: { role: "admin", isActive: true },
+        });
+
+        if (activeAdmins <= 1 && targetUser.isActive) {
+          return res.status(400).json({ error: "Cannot deactivate the last active administrator." });
+        }
+      }
+
+      const reason = typeof req.body?.reason === "string" ? req.body.reason.trim() : "";
+
+      const updatedUser = await prisma.user.update({
+        where: { id: userId },
+        data: {
+          isActive: false,
+          deactivatedAt: new Date(),
+          deactivatedById: req.userId!,
+          deactivationReason: reason || null,
+        },
+        select: { id: true, name: true, email: true, role: true, isActive: true },
+      });
+
+      return res.json({
+        message: "User deactivated",
+        user: updatedUser,
+      });
+    } catch (error) {
+      console.error("Error deactivating user:", error);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  }
+);
+
+/**
+ * POST /admin/users/:userId/reactivate
+ * Reactivate a previously deactivated user (student or alumni).
+ * Requires admin role.
+ */
+router.post(
+  "/users/:userId/reactivate",
+  authenticate,
+  requireAdmin,
+  async (req: AuthRequest, res: Response): Promise<Response | void> => {
+    try {
+      const userId = parseInt(req.params.userId, 10);
+      if (isNaN(userId)) {
+        return res.status(400).json({ error: "Invalid user ID" });
+      }
+
+      const targetUser = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { id: true, name: true, email: true, role: true },
+      });
+
+      if (!targetUser) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      const updatedUser = await prisma.user.update({
+        where: { id: userId },
+        data: {
+          isActive: true,
+          deactivatedAt: null,
+          deactivatedById: null,
+          deactivationReason: null,
+        },
+        select: { id: true, name: true, email: true, role: true, isActive: true },
+      });
+
+      return res.json({
+        message: "User reactivated",
+        user: updatedUser,
+      });
+    } catch (error) {
+      console.error("Error reactivating user:", error);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  }
+);
+
+/**
  * POST /mentors/:id/approve
- * 
+ *
  * Approve a pending alumni mentor
  * Requires admin role
- *
+ */
 router.post(
   "/mentors/:id/approve",
   authenticate,
@@ -123,11 +234,12 @@ router.post(
   }
 );
 
+/**
  * POST /mentors/:id/reject
- * 
+ *
  * Reject a pending alumni mentor
  * Requires admin role
- *
+ */
 router.post(
   "/mentors/:id/reject",
   authenticate,
@@ -178,7 +290,6 @@ router.post(
     }
   }
 );
-*/
 
 /**
  * GET /students
@@ -202,6 +313,7 @@ router.get(
           email: true,
           role: true,
           approvalStatus: true,
+          isActive: true,
           createdAt: true,
           studentId: true,
           contactEmail: true,
@@ -225,6 +337,7 @@ router.get(
           workExperience: true,
           projects: true,
           certifications: true,
+          profilePhotoFilePath: true,
         },
         orderBy: {
           createdAt: "desc",
@@ -261,6 +374,7 @@ router.get(
           email: true,
           role: true,
           approvalStatus: true,
+          isActive: true,
           createdAt: true,
           graduationYear: true,
           currentCompany: true,
@@ -277,6 +391,7 @@ router.get(
           workExperience: true,
           projects: true,
           certifications: true,
+          profilePhotoFilePath: true,
         },
         orderBy: {
           createdAt: "desc",
@@ -330,6 +445,7 @@ router.get(
           workExperience: true,
           projects: true,
           certifications: true,
+          profilePhotoFilePath: true,
         },
         orderBy: {
           createdAt: "asc",
@@ -367,6 +483,7 @@ router.get(
           email: true,
           role: true,
           approvalStatus: true,
+          isActive: true,
           createdAt: true,
           studentId: true,
           contactEmail: true,
@@ -390,6 +507,7 @@ router.get(
           workExperience: true,
           projects: true,
           certifications: true,
+          profilePhotoFilePath: true,
         },
         orderBy: {
           createdAt: "asc",
@@ -428,6 +546,7 @@ router.get(
               yearOfStudy: true,
               expectedGraduation: true,
               academicFocus: true,
+              profilePhotoFilePath: true,
             },
           },
           alumni: {
@@ -438,6 +557,7 @@ router.get(
               graduationYear: true,
               currentCompany: true,
               currentPosition: true,
+              profilePhotoFilePath: true,
             },
           },
           confirmedBy: {
@@ -1253,6 +1373,7 @@ router.get(
           isActive: true,
           passwordUpdatedAt: true,
           createdAt: true,
+          profilePhotoFilePath: true,
         },
         orderBy: { email: "asc" },
       });
@@ -1519,6 +1640,237 @@ router.post(
       });
     } catch (error) {
       console.error("Error reactivating user:", error);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  }
+);
+
+/**
+ * GET /admin/verification-codes
+ * 
+ * Admin-only endpoint to list student email verification codes.
+ * Gated behind ALLOW_ADMIN_CODE_VIEW environment variable for security.
+ * 
+ * Query params (optional):
+ * - purpose: EMAIL_VERIFICATION (default) or PASSWORD_RESET
+ * - email: optional email filter
+ * - status: active|expired|used|all (default: all for auto-polling)
+ * - limit: max records to return (default: 100, max: 200)
+ */
+router.get(
+  "/verification-codes",
+  authenticate,
+  requireAdmin,
+  async (req: AuthRequest, res: Response): Promise<Response | void> => {
+    try {
+      // Gate endpoint behind environment variable
+      if (process.env.ALLOW_ADMIN_CODE_VIEW !== "true") {
+        return res.status(403).json({ error: "Not available" });
+      }
+
+      const purpose = (req.query.purpose as string) || "EMAIL_VERIFICATION";
+      const email = (req.query.email as string) || undefined;
+      const status = (req.query.status as string) || "active";
+      let limit = parseInt((req.query.limit as string) || "100", 10);
+
+      // Validate and clamp limit
+      if (isNaN(limit) || limit < 1) limit = 100;
+      if (limit > 200) limit = 200;
+
+      // Fetch all records matching purpose and email filter
+      const allCodes = await prisma.emailVerification.findMany({
+        where: {
+          purpose: purpose as any,
+          ...(email && { email: { contains: email, mode: "insensitive" } }),
+        },
+        orderBy: { createdAt: "desc" },
+        take: limit * 2, // Fetch more to filter by status
+      });
+
+      const now = new Date();
+
+      // Filter by status and compute status field
+      const codesWithStatus = allCodes.map((record) => {
+        let computedStatus: "active" | "expired" | "used";
+
+        if (record.usedAt !== null) {
+          computedStatus = "used";
+        } else if (record.expiresAt < now) {
+          computedStatus = "expired";
+        } else {
+          computedStatus = "active";
+        }
+
+        return {
+          id: record.id,
+          email: record.email,
+          code: record.code,
+          purpose: record.purpose,
+          expiresAt: record.expiresAt.toISOString(),
+          usedAt: record.usedAt ? record.usedAt.toISOString() : null,
+          createdAt: record.createdAt.toISOString(),
+          status: computedStatus,
+        };
+      });
+
+      const activeCodes = codesWithStatus.filter((c) => c.status === "active");
+      const usedCodes = codesWithStatus.filter((c) => c.status === "used");
+      const expiredCodes = codesWithStatus.filter((c) => c.status === "expired");
+
+      const filteredCodes = codesWithStatus
+        .filter((c) => {
+          if (status === "all") return true;
+          return c.status === status;
+        })
+        .slice(0, limit);
+
+      return res.json({
+        codes: filteredCodes,
+        counts: {
+          total: codesWithStatus.length,
+          active: activeCodes.length,
+          used: usedCodes.length,
+          expired: expiredCodes.length,
+        },
+      });
+    } catch (error) {
+      console.error("Error fetching verification codes:", error);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  }
+);
+
+/**
+ * DELETE /admin/verification-codes/:id
+ * 
+ * Admin-only endpoint to delete a verification code.
+ */
+router.delete(
+  "/verification-codes/:id",
+  authenticate,
+  requireAdmin,
+  async (req: AuthRequest, res: Response): Promise<Response | void> => {
+    try {
+      // Validate ID is a number
+      const id = parseInt(req.params.id, 10);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid code ID" });
+      }
+
+      // Find the code
+      const code = await prisma.emailVerification.findUnique({
+        where: { id },
+      });
+
+      if (!code) {
+        return res.status(404).json({ error: "Verification code not found" });
+      }
+
+      // Hard delete the record
+      await prisma.emailVerification.delete({
+        where: { id },
+      });
+
+      return res.json({
+        message: "Verification code deleted",
+        deletedId: id,
+      });
+    } catch (error) {
+      console.error("Error deleting verification code:", error);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  }
+);
+
+/**
+ * GET /admin/dev/password-reset-code
+ *
+ * Dev-only helper to fetch the latest active password reset code for an email.
+ * Requires admin role. Disabled in production.
+ */
+router.get(
+  "/dev/password-reset-code",
+  authenticate,
+  requireAdmin,
+  async (req: AuthRequest, res: Response): Promise<Response | void> => {
+    try {
+      if (process.env.NODE_ENV === "production") {
+        return res.status(404).json({ error: "Not found" });
+      }
+
+      const emailParam = (req.query.email as string) || "";
+
+      if (!emailParam || typeof emailParam !== "string") {
+        return res.status(400).json({ error: "Email query parameter is required" });
+      }
+
+      const email = emailParam.toLowerCase().trim();
+
+      if (!email) {
+        return res.status(400).json({ error: "Email query parameter is required" });
+      }
+
+      const record = await prisma.emailVerification.findFirst({
+        where: {
+          email,
+          purpose: "PASSWORD_RESET",
+          usedAt: null,
+          expiresAt: { gt: new Date() },
+        },
+        orderBy: { createdAt: "desc" },
+      });
+
+      if (!record) {
+        return res.status(404).json({ error: "No active reset code found" });
+      }
+
+      return res.json({
+        email: record.email,
+        code: record.code,
+        expiresAt: record.expiresAt.toISOString(),
+        createdAt: record.createdAt.toISOString(),
+      });
+    } catch (error) {
+      console.error("Error fetching password reset code:", error);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  }
+);
+
+/**
+ * GET /admin/password-reset-requests
+ *
+ * List active (unused, unexpired) password reset requests for admins.
+ */
+router.get(
+  "/password-reset-requests",
+  authenticate,
+  requireAdmin,
+  async (_req: AuthRequest, res: Response): Promise<Response | void> => {
+    try {
+      const now = new Date();
+
+      const requests = await prisma.emailVerification.findMany({
+        where: {
+          purpose: "PASSWORD_RESET",
+          usedAt: null,
+          expiresAt: { gt: now },
+        },
+        orderBy: { createdAt: "desc" },
+      });
+
+      return res.json({
+        count: requests.length,
+        requests: requests.map((req) => ({
+          id: req.id,
+          email: req.email,
+          code: req.code,
+          createdAt: req.createdAt.toISOString(),
+          expiresAt: req.expiresAt.toISOString(),
+        })),
+      });
+    } catch (error) {
+      console.error("Error fetching password reset requests:", error);
       return res.status(500).json({ error: "Internal server error" });
     }
   }

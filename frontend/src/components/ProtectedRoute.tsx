@@ -29,7 +29,7 @@ export function ProtectedRoute({
   }
 
   // Check role-based access
-  if (allowedRoles && !allowedRoles.includes(user.role)) {
+  if (allowedRoles && user && !allowedRoles.includes(user.role)) {
     // Redirect to appropriate dashboard based on user role
     const roleDashboardMap: Record<UserRole, string> = {
       student: '/student/dashboard',

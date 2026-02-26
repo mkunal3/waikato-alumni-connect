@@ -9,11 +9,12 @@ import {
   Target, CheckCircle, Clock,
   Upload, FileText, BarChart3, Star, LogOut, Trash2
 } from 'lucide-react';
+import ProfilePhotoUploader from '../components/ProfilePhotoUploader';
 
 const waikatoLogo = '/waikato-logo.png';
 
 export function StudentDashboard() {
-  const { user, logout } = useAuth();
+  const { user, logout, setUserState } = useAuth();
   const navigate = useNavigate();
   
   const [loading, setLoading] = useState(true);
@@ -22,6 +23,10 @@ export function StudentDashboard() {
   const [matchData, setMatchData] = useState<MatchResponse['match'] | null>(null);
   const [cvUploaded, setCvUploaded] = useState(false);
   const [cvFileName, setCvFileName] = useState<string | null>(null);
+  const [uploadingProfilePhoto, setUploadingProfilePhoto] = useState(false);
+  const [profilePhotoError, setProfilePhotoError] = useState<string | null>(null);
+  const [profilePhotoVersion, setProfilePhotoVersion] = useState(0);
+  const normalizedApiBaseUrl = API_BASE_URL.replace(/\/$/, '');
 
   useEffect(() => {
     const fetchData = async () => {
@@ -78,101 +83,16 @@ export function StudentDashboard() {
   };
 
   const handleCVUpload = async (file: File) => {
-    try {
-      setError(null);
-      
-      // Validate file type
-      if (file.type !== 'application/pdf') {
-        setError('Only PDF files are allowed');
-        return;
-      }
-      
-      // Validate file size (max 5MB)
-      if (file.size > 5 * 1024 * 1024) {
-        setError('File size must be less than 5MB');
-        return;
-      }
-      
-      // Create FormData for file upload
-      const formData = new FormData();
-      formData.append('cv', file);
-      
-      const result = await apiRequest<{ uploaded: boolean; fileName: string; uploadedAt: string }>(
-        API_ENDPOINTS.uploadCV,
-        {
-          method: 'POST',
-          body: formData,
-        }
-      );
-      
-      setCvUploaded(true);
-      setCvFileName(result.fileName);
-      setError(null);
-      
-      // Refresh CV status
-      try {
-        const cvResponse = await apiRequest<{ uploaded: boolean; fileName: string | null }>(API_ENDPOINTS.getCV).catch(() => null);
-        if (cvResponse && cvResponse.uploaded && cvResponse.fileName) {
-          setCvUploaded(true);
-          setCvFileName(cvResponse.fileName);
-        }
-      } catch (err) {
-        console.warn('Failed to verify CV upload:', err);
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to upload CV');
-    }
-  };
-
-  const handleCVView = async () => {
-    try {
-      setError(null);
-      
-      const cvData = await apiRequest<{ uploaded: boolean; fileName: string | null; uploadedAt: string | null }>(API_ENDPOINTS.getCV);
-      
-      if (!cvData || !cvData.uploaded || !cvData.fileName) {
-        setError('CV not found');
-        return;
-      }
-      
-      // Open CV in new window
-      const token = localStorage.getItem('auth_token');
-      const url = `${API_BASE_URL}${API_ENDPOINTS.downloadCV}`;
-      const response = await fetch(url, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to fetch CV');
-      }
-      
-      const blob = await response.blob();
-      const pdfUrl = URL.createObjectURL(blob);
-      window.open(pdfUrl, '_blank');
-      
-      // Clean up the URL after a delay
-      setTimeout(() => URL.revokeObjectURL(pdfUrl), 100);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to view CV');
-    }
-  };
-
-  const handleCVReplace = () => {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = 'application/pdf';
-    input.onchange = (e) => {
-      const file = (e.target as HTMLInputElement).files?.[0];
-      if (file) {
-        handleCVUpload(file);
-      }
-    };
-    input.click();
-  };
-
-  const handleCVDelete = async () => {
+                <ProfilePhotoUploader
+                  photoUrl={(profileData?.profilePhotoFilePath || user?.profilePhotoFilePath)
+                    ? `${normalizedApiBaseUrl}${profileData?.profilePhotoFilePath || user?.profilePhotoFilePath}?v=${profilePhotoVersion}`
+                    : null}
+                  initials={getInitials(studentProfile.name || 'Student')}
+                  onUpload={handleProfilePhotoUpload}
+                  onRemove={handleProfilePhotoRemove}
+                  isUploading={uploadingProfilePhoto}
+                  errorMessage={profilePhotoError}
+                />
     if (!window.confirm('Are you sure you want to delete your CV?')) {
       return;
     }
@@ -189,6 +109,81 @@ export function StudentDashboard() {
       setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to delete CV');
+    }
+  };
+
+  const getInitials = (fullName: string): string => {
+    return fullName
+      .split(' ')
+      .map(part => part.charAt(0))
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
+  };
+
+  const handleProfilePhotoUpload = async (file: File) => {
+    try {
+      setProfilePhotoError(null);
+      setUploadingProfilePhoto(true);
+
+      if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+        setProfilePhotoError('Only JPEG, PNG, and WebP images are allowed');
+        setUploadingProfilePhoto(false);
+        return;
+      }
+
+      if (file.size > 2 * 1024 * 1024) {
+        setProfilePhotoError('File size must not exceed 2MB');
+        setUploadingProfilePhoto(false);
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await apiRequest<{ profilePhotoUrl: string; user: any }>(
+        API_ENDPOINTS.uploadProfilePhoto,
+        {
+          method: 'POST',
+          body: formData,
+          headers: {},
+        }
+      );
+
+      setUserState(response.user);
+      localStorage.setItem('auth_user', JSON.stringify(response.user));
+      setProfileData(response.user);
+      setProfilePhotoVersion((v) => v + 1);
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : 'Failed to upload profile photo';
+      setProfilePhotoError(errorMsg);
+    } finally {
+      setUploadingProfilePhoto(false);
+    }
+  };
+
+  const handleProfilePhotoRemove = async () => {
+    if (!window.confirm('Remove profile photo?')) {
+      return;
+    }
+
+    try {
+      setProfilePhotoError(null);
+      setUploadingProfilePhoto(true);
+
+      const response = await apiRequest<{ user: any }>(API_ENDPOINTS.deleteProfilePhoto, {
+        method: 'DELETE',
+      });
+
+      setUserState(response.user);
+      localStorage.setItem('auth_user', JSON.stringify(response.user));
+      setProfileData(response.user);
+      setProfilePhotoVersion((v) => v + 1);
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : 'Failed to remove profile photo';
+      setProfilePhotoError(errorMsg);
+    } finally {
+      setUploadingProfilePhoto(false);
     }
   };
 
@@ -331,7 +326,18 @@ export function StudentDashboard() {
               </div>
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <div style={{ width: '40px', height: '40px', borderRadius: '9999px', overflow: 'hidden', border: '1px solid #e5e7eb', backgroundColor: '#e5e7eb', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6b7280', fontWeight: 600, fontSize: '0.95rem' }}>
+                {user?.profilePhotoFilePath ? (
+                  <img
+                    src={`${API_BASE_URL}${user.profilePhotoFilePath}`}
+                    alt={user?.name || 'Profile'}
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  />
+                ) : (
+                  <span>{getInitials(user?.name || 'Student')}</span>
+                )}
+              </div>
               <button onClick={handleLogout} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', backgroundColor: '#D50000', color: 'white', padding: '0.5rem 1rem', borderRadius: '0.5rem', border: 'none', cursor: 'pointer', fontWeight: 600 }}>
                 <LogOut size={16} />
                 <span>Logout</span>
@@ -481,9 +487,16 @@ export function StudentDashboard() {
             {/* Profile Card */}
             <div style={{ backgroundColor: 'white', borderRadius: '0.75rem', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', border: '1px solid #e5e7eb', padding: '1.25rem' }}>
               <div style={{ textAlign: 'center', marginBottom: '1rem' }}>
-                <div style={{ width: '72px', height: '72px', borderRadius: '9999px', backgroundColor: '#e5e7eb', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6b7280', fontWeight: 600, fontSize: '1.25rem', margin: '0 auto 0.75rem' }}>
-                  {studentProfile.name.split(' ').map(n => n[0]).join('')}
-                </div>
+                <ProfilePhotoUploader
+                  photoUrl={(profileData?.profilePhotoFilePath || user?.profilePhotoFilePath)
+                    ? `${normalizedApiBaseUrl}${profileData?.profilePhotoFilePath || user?.profilePhotoFilePath}?v=${profilePhotoVersion}`
+                    : null}
+                  initials={getInitials(studentProfile.name || 'Student')}
+                  onUpload={handleProfilePhotoUpload}
+                  onRemove={handleProfilePhotoRemove}
+                  isUploading={uploadingProfilePhoto}
+                  errorMessage={profilePhotoError}
+                />
                 <h3 style={{ fontWeight: 600, marginBottom: '0.25rem', fontSize: '1rem' }}>{studentProfile.name}</h3>
                 <p style={{ fontSize: '0.8rem', color: '#6b7280', marginBottom: '0.5rem' }}>{studentProfile.email}</p>
                 <span style={{ display: 'inline-block', backgroundColor: '#dcfce7', color: '#16a34a', padding: '0.2rem 0.6rem', borderRadius: '9999px', fontSize: '0.8rem', fontWeight: 500 }}>Student</span>

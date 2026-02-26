@@ -41,6 +41,7 @@ router.post(
           createdAt: true,
           passwordHash: true,
           passwordUpdatedAt: true,
+          profilePhotoFilePath: true,
         },
       });
       if (!user) {
@@ -146,6 +147,7 @@ router.get(
           approvalStatus: true,
           createdAt: true,
           passwordUpdatedAt: true,
+          profilePhotoFilePath: true,
         },
       });
 

@@ -21,7 +21,10 @@ const storage = multer.diskStorage({
   },
   filename: (req: any, file, cb) => {
     // Filename format: userId_timestamp.ext
-    const userId = req.userId;
+    const userId = req.userId ?? req.user?.id;
+    if (!userId) {
+      return cb(new Error("User ID is required for profile photo upload"), "");
+    }
     const timestamp = Date.now();
     const ext = path.extname(file.originalname);
     const filename = `${userId}_${timestamp}${ext}`;
@@ -49,6 +52,31 @@ const upload = multer({
   },
 });
 
+// Wrap multer upload to return JSON errors instead of default handler
+const uploadSingleWithErrors = (fieldName: string) => (
+  req: AuthRequest,
+  res: Response,
+  next: (err?: any) => void
+) => {
+  upload.single(fieldName)(req as any, res as any, (err: any) => {
+    if (!err) return next();
+
+    if (err instanceof multer.MulterError) {
+      if (err.code === "LIMIT_FILE_SIZE") {
+        return res.status(400).json({ error: "File size exceeds 2MB limit" });
+      }
+      return res.status(400).json({ error: err.message });
+    }
+
+    if (err.message && err.message.includes("Invalid file type")) {
+      return res.status(400).json({ error: err.message });
+    }
+
+    console.error("Profile photo upload error:", err);
+    return res.status(500).json({ error: "Internal server error" });
+  });
+};
+
 /**
  * POST /users/me/profile-photo
  * 
@@ -61,7 +89,7 @@ const upload = multer({
 router.post(
   "/users/me/profile-photo",
   authenticate,
-  upload.single("file"),
+  uploadSingleWithErrors("file"),
   async (req: AuthRequest, res: Response): Promise<Response | void> => {
     try {
       if (!req.file) {
@@ -141,6 +169,7 @@ router.post(
  * - Requires authentication
  * - Removes file from disk (best effort)
  * - Sets profilePhoto fields to null in DB
+ * - Returns 200 even if no photo exists (idempotent)
  */
 router.delete(
   "/users/me/profile-photo",
@@ -153,8 +182,9 @@ router.delete(
         select: { profilePhotoFileName: true },
       });
 
+      // If no photo, return success message (idempotent operation)
       if (!user?.profilePhotoFileName) {
-        return res.status(404).json({ error: "No profile photo found" });
+        return res.status(200).json({ message: "Profile photo already removed" });
       }
 
       // Delete file from disk (best effort)

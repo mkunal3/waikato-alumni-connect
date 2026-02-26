@@ -1,24 +1,39 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { apiRequest } from '../config/api';
+import { apiRequest, API_BASE_URL } from '../config/api';
 import { API_ENDPOINTS } from '../config/api';
 import { ProfileResponse } from '../types/auth';
 import { ArrowLeft, Save, X } from 'lucide-react';
+import ProfilePhotoUploader from '../components/ProfilePhotoUploader';
 
 const waikatoLogo = '/waikato-logo.png';
 
 // Graduation Year options (from 2000 to current year + 5)
 const GRADUATION_YEARS = Array.from({ length: 30 }, (_, i) => 2000 + i);
 
+const getInitials = (fullName: string): string =>
+  fullName
+    .split(' ')
+    .filter(Boolean)
+    .map((part) => part.charAt(0))
+    .join('')
+    .toUpperCase()
+    .slice(0, 2);
+
 export function MentorProfilePage() {
-  const { user } = useAuth();
+  const { user, setUserState } = useAuth();
   const navigate = useNavigate();
   
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [profilePhotoPath, setProfilePhotoPath] = useState<string | null>(null);
+  const [profilePhotoError, setProfilePhotoError] = useState<string | null>(null);
+  const [uploadingProfilePhoto, setUploadingProfilePhoto] = useState(false);
+  const [profilePhotoVersion, setProfilePhotoVersion] = useState(0);
+  const normalizedApiBaseUrl = API_BASE_URL.replace(/\/$/, '');
   
   const [formData, setFormData] = useState({
     firstName: '',
@@ -87,6 +102,7 @@ export function MentorProfilePage() {
             linkedInUrl: (response.user as any).linkedInUrl || '',
             workExperience: workExp,
           });
+          setProfilePhotoPath((response.user as any).profilePhotoFilePath || null);
         }
       } catch (err) {
         console.warn('Failed to load profile, using default data:', err);
@@ -110,6 +126,7 @@ export function MentorProfilePage() {
           linkedInUrl: '',
           workExperience: [],
         });
+        setProfilePhotoPath(user?.profilePhotoFilePath || null);
       } finally {
         setLoading(false);
       }
@@ -158,6 +175,72 @@ export function MentorProfilePage() {
       ...prev,
       mentoringGoals: prev.mentoringGoals.filter(g => g !== goal)
     }));
+  };
+
+  const handleProfilePhotoUpload = async (file: File) => {
+    try {
+      setProfilePhotoError(null);
+      setUploadingProfilePhoto(true);
+
+      if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+        setProfilePhotoError('Only JPEG, PNG, and WebP images are allowed');
+        setUploadingProfilePhoto(false);
+        return;
+      }
+
+      if (file.size > 2 * 1024 * 1024) {
+        setProfilePhotoError('File size must not exceed 2MB');
+        setUploadingProfilePhoto(false);
+        return;
+      }
+
+      const formDataPayload = new FormData();
+      formDataPayload.append('file', file);
+
+      const response = await apiRequest<{ profilePhotoUrl: string; user: any }>(
+        API_ENDPOINTS.uploadProfilePhoto,
+        {
+          method: 'POST',
+          body: formDataPayload,
+          headers: {},
+        }
+      );
+
+      setUserState(response.user);
+      localStorage.setItem('auth_user', JSON.stringify(response.user));
+      setProfilePhotoPath(response.user.profilePhotoFilePath || null);
+      setProfilePhotoVersion((v) => v + 1);
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : 'Failed to upload profile photo';
+      setProfilePhotoError(errorMsg);
+    } finally {
+      setUploadingProfilePhoto(false);
+    }
+  };
+
+  const handleProfilePhotoRemove = async () => {
+    if (!window.confirm('Remove profile photo?')) {
+      return;
+    }
+
+    try {
+      setProfilePhotoError(null);
+      setUploadingProfilePhoto(true);
+
+      const response = await apiRequest<{ user: any }>(API_ENDPOINTS.deleteProfilePhoto, {
+        method: 'DELETE',
+      });
+
+      setUserState(response.user);
+      localStorage.setItem('auth_user', JSON.stringify(response.user));
+      setProfilePhotoPath(null);
+      setProfilePhotoVersion((v) => v + 1);
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : 'Failed to remove profile photo';
+      setProfilePhotoError(errorMsg);
+    } finally {
+      setUploadingProfilePhoto(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -261,6 +344,14 @@ export function MentorProfilePage() {
 
         {/* Form */}
         <form onSubmit={handleSubmit} style={{ backgroundColor: 'white', borderRadius: '0.75rem', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', border: '1px solid #e5e7eb', padding: '2rem' }}>
+          <ProfilePhotoUploader
+            photoUrl={profilePhotoPath ? `${normalizedApiBaseUrl}${profilePhotoPath}?v=${profilePhotoVersion}` : null}
+            initials={getInitials(`${formData.firstName} ${formData.lastName}` || user?.name || 'A')}
+            onUpload={handleProfilePhotoUpload}
+            onRemove={handleProfilePhotoRemove}
+            isUploading={uploadingProfilePhoto}
+            errorMessage={profilePhotoError}
+          />
           {/* Basic Information */}
           <div style={{ marginBottom: '2rem' }}>
             <h2 style={{ fontSize: '1.25rem', fontWeight: 600, marginBottom: '1rem' }}>Basic Information</h2>

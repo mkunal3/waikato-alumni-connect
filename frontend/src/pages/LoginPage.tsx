@@ -1,17 +1,16 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import React, { useState } from 'react';
+import { useNavigate, useLocation, Location } from 'react-router-dom';
 import { Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { useLanguage } from '../contexts/LanguageContext';
-import { content } from '../config/content';
 import { WaikatoNavigation } from '../components/WaikatoNavigation';
 
 export function LoginPage() {
-  const { t } = useLanguage();
   const { login, isAuthenticated, user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const [passwordChangedMsg, setPasswordChangedMsg] = useState(location.state?.passwordChanged || false);
+  const fromLocation = (location.state as { from?: Location } | undefined)?.from;
+  const passwordChanged = (location.state as { passwordChanged?: boolean } | null)?.passwordChanged || false;
+  const [passwordChangedMsg] = useState<boolean>(passwordChanged);
   
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState('');
@@ -39,9 +38,15 @@ export function LoginPage() {
 
     try {
       const loggedInUser = await login({ email, password });
-      
-      // Navigate back to home page after login
-      navigate('/', { replace: true });
+      const roleDashboardMap: Record<string, string> = {
+        student: '/student/dashboard',
+        alumni: '/mentor/dashboard',
+        admin: '/admin/dashboard',
+      };
+
+      const fallback = roleDashboardMap[loggedInUser.role] || '/dashboard';
+      const targetPath = fromLocation?.pathname || fallback;
+      navigate(targetPath, { replace: true });
     } catch (err) {
       console.error('Login error details:', err);
       let errorMessage = 'Login failed. Please try again.';
